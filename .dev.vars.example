@@ -1,0 +1,4 @@
+GOOGLE_CLIENT_ID=tu-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=tu-google-client-secret
+SESSION_SECRET=cambia-esto-por-una-cadena-larga-y-aleatoria
+ADMIN_PASSWORD=tu-clave-admin-segura

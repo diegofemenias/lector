@@ -1,0 +1,21 @@
+{
+  "name": "lector",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply lector-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply lector-db --remote",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "hono": "^4.8.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250620.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.103.0"
+  }
+}
