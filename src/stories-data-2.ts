@@ -11,19 +11,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Dónde encontró Valentina la puerta?",
-        options: { a: "En su casa", b: "Detrás de una estantería", c: "En el parque", d: "En la escuela" },
+        options: { a: "En la escuela", b: "Detrás de una estantería", c: "En su casa", d: "En el parque" },
         correct: "b",
       },
       {
         question: "¿Qué decía el letrero?",
-        options: { a: "No entrar", b: "Para quien lea con respeto", c: "Solo adultos", d: "Cuidado con el dragón" },
+        options: { a: "Solo adultos", b: "Para quien lea con respeto", c: "No entrar", d: "Cuidado con el dragón" },
         correct: "b",
       },
       {
         question: "¿Sobre qué era el cuento que leyó?",
-        options: { a: "Un pirata", b: "Un dragón amable", c: "Un coche", d: "Una ciudad" },
-        correct: "b",
-      },
+        options: { a: "Un coche", b: "Una ciudad", c: "Un dragón amable", d: "Un pirata" },
+        correct: "c",
+      }
     ],
   },
   {
@@ -36,19 +36,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Qué olvidó Juana?",
-        options: { a: "Su mochila", b: "Su paraguas", c: "Su dinero", d: "Su abrigo" },
-        correct: "b",
+        options: { a: "Su abrigo", b: "Su mochila", c: "Su paraguas", d: "Su dinero" },
+        correct: "c",
       },
       {
         question: "¿De qué color era el paraguas del abuelo?",
-        options: { a: "Rojo", b: "Azul", c: "Amarillo", d: "Negro" },
+        options: { a: "Rojo", b: "Negro", c: "Amarillo", d: "Azul" },
         correct: "c",
       },
       {
         question: "¿Con quién compartió el paraguas?",
-        options: { a: "Con un perro", b: "Con un niño y una señora", c: "Con su maestra", d: "Con nadie" },
-        correct: "b",
-      },
+        options: { a: "Con nadie", b: "Con su maestra", c: "Con un niño y una señora", d: "Con un perro" },
+        correct: "c",
+      }
     ],
   },
   {
@@ -61,19 +61,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Qué debía hacer Pedro?",
-        options: { a: "Pintar el reloj", b: "Darle cuerda al reloj", c: "Vender el reloj", d: "Esconder el reloj" },
-        correct: "b",
+        options: { a: "Pintar el reloj", b: "Vender el reloj", c: "Darle cuerda al reloj", d: "Esconder el reloj" },
+        correct: "c",
       },
       {
         question: "¿Qué pensó Pedro cuando el reloj se detuvo?",
-        options: { a: "Que lo había roto", b: "Que era medianoche", c: "Que era un regalo", d: "Que no importaba" },
-        correct: "a",
+        options: { a: "Que no importaba", b: "Que lo había roto", c: "Que era medianoche", d: "Que era un regalo" },
+        correct: "b",
       },
       {
         question: "¿Qué aprendió Pedro?",
-        options: { a: "Que los relojes no sirven", b: "Que cuidar algo antiguo requiere atención", c: "Que debe correr más", d: "Que no debe tocar nada" },
+        options: { a: "Que debe correr más", b: "Que cuidar algo antiguo requiere atención", c: "Que no debe tocar nada", d: "Que los relojes no sirven" },
         correct: "b",
-      },
+      }
     ],
   },
   {
@@ -86,19 +86,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Qué le pasó a la cometa?",
-        options: { a: "Se perdió", b: "Se rompió la cola", c: "Se mojó", d: "Cambió de color" },
-        correct: "b",
+        options: { a: "Se perdió", b: "Se mojó", c: "Cambió de color", d: "Se rompió la cola" },
+        correct: "d",
       },
       {
         question: "¿Quién ayudó a Andrés?",
-        options: { a: "Su papá", b: "Un guardia", c: "Una niña llamada Inés", d: "Su perro" },
+        options: { a: "Su perro", b: "Un guardia", c: "Una niña llamada Inés", d: "Su papá" },
         correct: "c",
       },
       {
         question: "¿Qué propuso Andrés al final?",
-        options: { a: "Vender la cometa", b: "Ser equipo los domingos", c: "No volar más", d: "Irse a casa" },
+        options: { a: "Irse a casa", b: "Ser equipo los domingos", c: "No volar más", d: "Vender la cometa" },
         correct: "b",
-      },
+      }
     ],
   },
   {
@@ -111,19 +111,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Qué propuso la profesora?",
-        options: { a: "Un concurso de dibujo", b: "Plantar un huerto", c: "Una excursión", d: "Un examen" },
-        correct: "b",
+        options: { a: "Plantar un huerto", b: "Un concurso de dibujo", c: "Un examen", d: "Una excursión" },
+        correct: "a",
       },
       {
         question: "¿Qué hicieron durante semanas?",
-        options: { a: "Solo jugaron", b: "Regaron y sacaron malas hierbas", c: "Pintaron el patio", d: "Viajaron" },
-        correct: "b",
+        options: { a: "Viajaron", b: "Solo jugaron", c: "Pintaron el patio", d: "Regaron y sacaron malas hierbas" },
+        correct: "d",
       },
       {
         question: "¿Qué prepararon al final?",
-        options: { a: "Una pizza", b: "Una ensalada", c: "Un pastel", d: "Una sopa" },
+        options: { a: "Un pastel", b: "Una ensalada", c: "Una sopa", d: "Una pizza" },
         correct: "b",
-      },
+      }
     ],
   },
   {
@@ -136,19 +136,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Con qué soñaba Pipo?",
-        options: { a: "Con nadar más", b: "Con ver el bosque", c: "Con dormir todo el día", d: "Con pescar solamente" },
-        correct: "b",
+        options: { a: "Con nadar más", b: "Con pescar solamente", c: "Con ver el bosque", d: "Con dormir todo el día" },
+        correct: "c",
       },
       {
         question: "¿Cómo llegó a la isla verde?",
-        options: { a: "Volando", b: "Siguiendo un barco de investigación", c: "En tren", d: "Caminando por un puente" },
-        correct: "b",
+        options: { a: "Siguiendo un barco de investigación", b: "Caminando por un puente", c: "En tren", d: "Volando" },
+        correct: "a",
       },
       {
         question: "¿Qué hizo al volver?",
-        options: { a: "Se quedó callado", b: "Dibujó su aventura en la nieve", c: "Se mudó", d: "Vendió sus binoculares" },
+        options: { a: "Se mudó", b: "Dibujó su aventura en la nieve", c: "Vendió sus binoculares", d: "Se quedó callado" },
         correct: "b",
-      },
+      }
     ],
   },
   {
@@ -161,19 +161,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Qué quería hacer Clara?",
-        options: { a: "Un pastel de cumpleaños", b: "Galletas para su papá", c: "Pan", d: "Sopa" },
-        correct: "b",
-      },
-      {
-        question: "¿Qué error cometió al principio?",
-        options: { a: "Usó demasiada sal", b: "Olvidó el horno", c: "No usó harina", d: "Quemó la cocina" },
+        options: { a: "Galletas para su papá", b: "Un pastel de cumpleaños", c: "Pan", d: "Sopa" },
         correct: "a",
       },
       {
-        question: "¿Qué dijo el papá?",
-        options: { a: "Que no cocinara más", b: "Que el mejor ingrediente fue no rendirse", c: "Que comprara galletas", d: "Que era muy tarde" },
-        correct: "b",
+        question: "¿Qué error cometió al principio?",
+        options: { a: "No usó harina", b: "Olvidó el horno", c: "Quemó la cocina", d: "Usó demasiada sal" },
+        correct: "d",
       },
+      {
+        question: "¿Qué dijo el papá?",
+        options: { a: "Que el mejor ingrediente fue no rendirse", b: "Que era muy tarde", c: "Que comprara galletas", d: "Que no cocinara más" },
+        correct: "a",
+      }
     ],
   },
   {
@@ -186,19 +186,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Qué había sobre el arroyo?",
-        options: { a: "Un puente de piedra", b: "Un puente de cuerda", c: "Una balsa", d: "Nada" },
-        correct: "b",
+        options: { a: "Un puente de cuerda", b: "Un puente de piedra", c: "Nada", d: "Una balsa" },
+        correct: "a",
       },
       {
         question: "¿Qué le aconsejó el monitor?",
-        options: { a: "Correr rápido", b: "Mirar al frente y avanzar paso a paso", c: "Volver a casa", d: "Saltar" },
+        options: { a: "Saltar", b: "Mirar al frente y avanzar paso a paso", c: "Volver a casa", d: "Correr rápido" },
         correct: "b",
       },
       {
         question: "¿Qué descubrió Leo?",
-        options: { a: "Que el puente era falso", b: "Que el miedo se puede atravesar con paciencia", c: "Que no quiere amigos", d: "Que el arroyo era profundo" },
-        correct: "b",
-      },
+        options: { a: "Que el puente era falso", b: "Que no quiere amigos", c: "Que el arroyo era profundo", d: "Que el miedo se puede atravesar con paciencia" },
+        correct: "d",
+      }
     ],
   },
   {
@@ -211,19 +211,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Por qué se escondía Fina?",
-        options: { a: "Porque tenía frío", b: "Porque se avergonzaba de brillar menos", c: "Porque dormía", d: "Porque no sabía volar" },
-        correct: "b",
+        options: { a: "Porque tenía frío", b: "Porque dormía", c: "Porque se avergonzaba de brillar menos", d: "Porque no sabía volar" },
+        correct: "c",
       },
       {
         question: "¿A quién ayudó Fina?",
-        options: { a: "A un conejo", b: "A un renacuajo", c: "A un búho", d: "A un niño" },
-        correct: "b",
+        options: { a: "A un niño", b: "A un búho", c: "A un renacuajo", d: "A un conejo" },
+        correct: "c",
       },
       {
         question: "¿Qué aprendieron las otras luciérnagas?",
-        options: { a: "Que deben apagar su luz", b: "Que cada luz puede cambiar una noche", c: "Que deben irse", d: "Que el agua es peligrosa" },
-        correct: "b",
-      },
+        options: { a: "Que cada luz puede cambiar una noche", b: "Que deben irse", c: "Que el agua es peligrosa", d: "Que deben apagar su luz" },
+        correct: "a",
+      }
     ],
   },
   {
@@ -236,19 +236,19 @@ export const STORIES_PART2: StoryInput[] = [
     questions: [
       {
         question: "¿Qué desaparecía cada mañana?",
-        options: { a: "Leche", b: "Migas de tostadas", c: "Frutas", d: "Cucharas" },
+        options: { a: "Frutas", b: "Migas de tostadas", c: "Leche", d: "Cucharas" },
         correct: "b",
       },
       {
         question: "¿Quién era el culpable?",
-        options: { a: "Su hermana", b: "Un gato", c: "Un hámster llamado Nube", d: "Su papá" },
+        options: { a: "Un gato", b: "Su papá", c: "Un hámster llamado Nube", d: "Su hermana" },
         correct: "c",
       },
       {
         question: "¿Qué hizo Bruno al final?",
-        options: { a: "Dejó la jaula abierta", b: "Arregló la jaula", c: "Se mudó", d: "Dejó de desayunar" },
-        correct: "b",
-      },
+        options: { a: "Se mudó", b: "Dejó la jaula abierta", c: "Arregló la jaula", d: "Dejó de desayunar" },
+        correct: "c",
+      }
     ],
-  },
+  }
 ];

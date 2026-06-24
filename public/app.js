@@ -13,6 +13,7 @@ bindVocabularyClicks(app);
 let state = {
   user: null,
   story: null,
+  storyMeta: null,
   answers: {},
 };
 
@@ -144,13 +145,21 @@ function renderNamePicker({ editing = false } = {}) {
 }
 
 function renderHome() {
+  const unread = state.user.unreadStories ?? 0;
+  const allRead = unread === 0 && (state.user.totalStories ?? 0) > 0;
+  const progressText = allRead
+    ? "¡Leíste todos los cuentos! Ahora podés volver a leer alguno al azar."
+    : unread > 0
+      ? `Te quedan <strong>${unread}</strong> cuento${unread === 1 ? "" : "s"} nuevo${unread === 1 ? "" : "s"} por leer.`
+      : "Te toca un cuento al azar. Léelo con calma y responde las 3 preguntas.";
+
   app.innerHTML = `
     <section class="card stack">
       <div class="row" style="justify-content:space-between">
         <h2>Hola, ${escapeHtml(state.user.displayName)} 👋</h2>
         <span class="badge">${state.user.points} puntos · ${state.user.storiesRead} cuentos</span>
       </div>
-      <p class="subtitle">Te toca un cuento al azar. Léelo con calma y responde las 3 preguntas.</p>
+      <p class="subtitle">${progressText}</p>
       <div class="points-breakdown">
         <span class="chip">+1 leer</span>
         <span class="chip">+1 por acierto</span>
@@ -169,10 +178,16 @@ function renderStory() {
   const vocabHint = vocab && Object.keys(vocab).length
     ? `<p class="vocab-hint">💡 Las palabras <span class="word-help-sample">subrayadas en color</span> son más difíciles. Tocalas para ver qué significan.</p>`
     : "";
+  const repeatHint = state.storyMeta?.isRepeat
+    ? `<p class="vocab-hint" style="background:#fffbeb;border-color:#fcd34d;color:#b45309">📚 Ya leíste todos los cuentos nuevos. Este es un repaso al azar.</p>`
+    : state.storyMeta?.unreadRemaining
+      ? `<p class="subtitle" style="margin:0 0 0.5rem">Cuentos nuevos que te faltan: <strong>${state.storyMeta.unreadRemaining}</strong></p>`
+      : "";
 
   app.innerHTML = `
     <section class="card stack">
       <h2 class="story-title">${enrichText(s.title, vocab)}</h2>
+      ${repeatHint}
       ${vocabHint}
       ${s.paragraphs.map((p) => `<p class="paragraph">${enrichText(p, vocab)}</p>`).join("")}
       <hr style="border:none;border-top:2px dashed #e9d5ff;margin:0.5rem 0" />
@@ -214,6 +229,10 @@ function renderStory() {
       });
       state.user.points = result.totalPoints;
       state.user.storiesRead = result.storiesRead;
+      if (result.unreadStories != null) {
+        state.user.unreadStories = result.unreadStories;
+        state.user.totalStories = result.totalStories;
+      }
       renderNav();
       renderResult(result);
     } catch (err) {
@@ -287,6 +306,7 @@ async function loadRanking() {
 async function loadStory() {
   const data = await api("/api/story/random");
   state.story = data.story;
+  state.storyMeta = { isRepeat: data.isRepeat, unreadRemaining: data.unreadRemaining };
   renderStory();
 }
 

@@ -1,24 +1,62 @@
 import type { StoryInput } from "./types";
 import { STORIES } from "./stories-data";
 
-export async function seedStoriesIfEmpty(db: D1Database): Promise<boolean> {
-  const count = await db.prepare("SELECT COUNT(*) as c FROM stories").first<{ c: number }>();
-  if ((count?.c ?? 0) > 0) return false;
+/** Incrementar cuando cambien opciones/respuestas de preguntas ya en producción. */
+export const QUESTIONS_LAYOUT_VERSION = 2;
+
+const META_QUESTIONS_VERSION = "questions_layout_version";
+
+async function getMeta(db: D1Database, key: string): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT value FROM app_meta WHERE key = ?")
+    .bind(key)
+    .first<{ value: string }>();
+  return row?.value ?? null;
+}
+
+async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
+  await db
+    .prepare(
+      "INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+    )
+    .bind(key, value)
+    .run();
+}
+
+/** Inserta solo cuentos cuyo título aún no existe. No modifica intentos ni ranking. */
+export async function syncStories(db: D1Database): Promise<number> {
+  let added = 0;
 
   for (const story of STORIES) {
-    const result = await db
-      .prepare(
-        "INSERT OR IGNORE INTO stories (title, paragraph1, paragraph2, paragraph3) VALUES (?, ?, ?, ?)"
-      )
-      .bind(story.title, story.paragraphs[0], story.paragraphs[1], story.paragraphs[2])
-      .run();
-    const storyId = result.meta.last_row_id;
+    const existing = await db
+      .prepare("SELECT id FROM stories WHERE title = ?")
+      .bind(story.title)
+      .first<{ id: number }>();
+
+    let storyId = existing?.id;
+
+    if (!storyId) {
+      await db
+        .prepare(
+          "INSERT OR IGNORE INTO stories (title, paragraph1, paragraph2, paragraph3) VALUES (?, ?, ?, ?)"
+        )
+        .bind(story.title, story.paragraphs[0], story.paragraphs[1], story.paragraphs[2])
+        .run();
+
+      const row = await db
+        .prepare("SELECT id FROM stories WHERE title = ?")
+        .bind(story.title)
+        .first<{ id: number }>();
+      storyId = row?.id;
+      if (storyId) added++;
+    }
+
     if (!storyId) continue;
 
     for (const q of story.questions) {
       await db
         .prepare(
-          `INSERT INTO questions (story_id, question_text, option_a, option_b, option_c, option_d, correct_option)
+          `INSERT OR IGNORE INTO questions (story_id, question_text, option_a, option_b, option_c, option_d, correct_option)
            VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
@@ -33,7 +71,139 @@ export async function seedStoriesIfEmpty(db: D1Database): Promise<boolean> {
         .run();
     }
   }
-  return true;
+
+  return added;
+}
+
+/** Deja exactamente 3 preguntas por cuento, alineadas con los datos fuente. */
+export async function reconcileQuestions(db: D1Database): Promise<number> {
+  const storyRows = await db
+    .prepare("SELECT id, title FROM stories")
+    .all<{ id: number; title: string }>();
+  const storyIdByTitle = new Map(storyRows.results.map((r) => [r.title, r.id]));
+
+  let removed = 0;
+
+  for (const story of STORIES) {
+    const storyId = storyIdByTitle.get(story.title);
+    if (!storyId) continue;
+
+    const texts = story.questions.map((q) => q.question);
+
+    const extra = await db
+      .prepare(
+        `DELETE FROM questions
+         WHERE story_id = ? AND question_text NOT IN (?, ?, ?)`
+      )
+      .bind(storyId, texts[0], texts[1], texts[2])
+      .run();
+    removed += extra.meta.changes ?? 0;
+
+    for (const q of story.questions) {
+      const rows = await db
+        .prepare(
+          `SELECT id FROM questions WHERE story_id = ? AND question_text = ? ORDER BY id`
+        )
+        .bind(storyId, q.question)
+        .all<{ id: number }>();
+
+      const ids = (rows.results ?? []).map((r) => r.id);
+
+      if (ids.length === 0) {
+        await db
+          .prepare(
+            `INSERT INTO questions (story_id, question_text, option_a, option_b, option_c, option_d, correct_option)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            storyId,
+            q.question,
+            q.options.a,
+            q.options.b,
+            q.options.c,
+            q.options.d,
+            q.correct
+          )
+          .run();
+        continue;
+      }
+
+      const keepId = ids[0]!;
+      await db
+        .prepare(
+          `UPDATE questions
+           SET option_a = ?, option_b = ?, option_c = ?, option_d = ?, correct_option = ?
+           WHERE id = ?`
+        )
+        .bind(q.options.a, q.options.b, q.options.c, q.options.d, q.correct, keepId)
+        .run();
+
+      for (const dupId of ids.slice(1)) {
+        await db.prepare("DELETE FROM questions WHERE id = ?").bind(dupId).run();
+        removed++;
+      }
+    }
+  }
+
+  return removed;
+}
+
+/** Actualiza opciones y respuesta correcta de preguntas ya existentes (por título + texto). */
+export async function syncQuestionOptions(db: D1Database): Promise<number> {
+  const storyRows = await db
+    .prepare("SELECT id, title FROM stories")
+    .all<{ id: number; title: string }>();
+  const storyIdByTitle = new Map(storyRows.results.map((r) => [r.title, r.id]));
+
+  const statements: D1PreparedStatement[] = [];
+
+  for (const story of STORIES) {
+    const storyId = storyIdByTitle.get(story.title);
+    if (!storyId) continue;
+
+    for (const q of story.questions) {
+      statements.push(
+        db
+          .prepare(
+            `UPDATE questions
+             SET option_a = ?, option_b = ?, option_c = ?, option_d = ?, correct_option = ?
+             WHERE story_id = ? AND question_text = ?`
+          )
+          .bind(
+            q.options.a,
+            q.options.b,
+            q.options.c,
+            q.options.d,
+            q.correct,
+            storyId,
+            q.question
+          )
+      );
+    }
+  }
+
+  const batchSize = 100;
+  for (let i = 0; i < statements.length; i += batchSize) {
+    await db.batch(statements.slice(i, i + batchSize));
+  }
+
+  return statements.length;
+}
+
+export async function ensureQuestionOptionsSynced(db: D1Database): Promise<void> {
+  const version = String(QUESTIONS_LAYOUT_VERSION);
+  const stored = await getMeta(db, META_QUESTIONS_VERSION);
+  if (stored === version) return;
+
+  await reconcileQuestions(db);
+  await syncQuestionOptions(db);
+  await setMeta(db, META_QUESTIONS_VERSION, version);
+}
+
+/** @deprecated Usar syncStories */
+export async function seedStoriesIfEmpty(db: D1Database): Promise<boolean> {
+  const added = await syncStories(db);
+  return added > 0;
 }
 
 export { STORIES };

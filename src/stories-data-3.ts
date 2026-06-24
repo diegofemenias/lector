@@ -11,19 +11,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Con qué construyeron la torre?",
-        options: { a: "Con bloques de madera", b: "Con cajas de cartón", c: "Con piedras", d: "Con libros" },
-        correct: "b",
+        options: { a: "Con cajas de cartón", b: "Con bloques de madera", c: "Con piedras", d: "Con libros" },
+        correct: "a",
       },
       {
         question: "¿Qué pasó cuando pusieron un techo de almohada?",
-        options: { a: "La torre creció", b: "La torre se tambaleó", c: "Llovió", d: "Llegó la maestra" },
-        correct: "b",
+        options: { a: "La torre se tambaleó", b: "Llegó la maestra", c: "La torre creció", d: "Llovió" },
+        correct: "a",
       },
       {
         question: "¿En qué jugaron al final?",
-        options: { a: "A médicos", b: "A guardianes de un castillo", c: "A fútbol", d: "A escondidas" },
-        correct: "b",
-      },
+        options: { a: "A fútbol", b: "A médicos", c: "A escondidas", d: "A guardianes de un castillo" },
+        correct: "d",
+      }
     ],
   },
   {
@@ -36,19 +36,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Dónde estaba Sol de vacaciones?",
-        options: { a: "En la montaña", b: "En la costa", c: "En el desierto", d: "En la ciudad" },
-        correct: "b",
+        options: { a: "En la costa", b: "En el desierto", c: "En la montaña", d: "En la ciudad" },
+        correct: "a",
       },
       {
         question: "¿Quién le enseñó a armar el collar?",
-        options: { a: "Su papá", b: "Su abuela", c: "Su maestra", d: "Un pescador" },
-        correct: "b",
+        options: { a: "Su papá", b: "Su maestra", c: "Su abuela", d: "Un pescador" },
+        correct: "c",
       },
       {
         question: "¿Qué le recordaba el collar?",
-        options: { a: "El colegio", b: "El sonido de las olas", c: "La nieve", d: "El tráfico" },
-        correct: "b",
-      },
+        options: { a: "El tráfico", b: "El colegio", c: "La nieve", d: "El sonido de las olas" },
+        correct: "d",
+      }
     ],
   },
   {
@@ -61,19 +61,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Qué error cometió Rafa?",
-        options: { a: "Perdió su mochila", b: "Bajó dos paradas antes", c: "Se quedó dormido en casa", d: "Tomó un tren" },
-        correct: "b",
+        options: { a: "Perdió su mochila", b: "Se quedó dormido en casa", c: "Tomó un tren", d: "Bajó dos paradas antes" },
+        correct: "d",
       },
       {
         question: "¿Quién lo ayudó?",
-        options: { a: "Un policía", b: "Una señora mayor", c: "Su hermano", d: "El conductor" },
-        correct: "b",
+        options: { a: "El conductor", b: "Un policía", c: "Una señora mayor", d: "Su hermano" },
+        correct: "c",
       },
       {
         question: "¿Qué aprendió Rafa?",
-        options: { a: "A no viajar solo", b: "A mirar por la ventana y guardar el número de su mamá", c: "A correr siempre", d: "A esconderse" },
-        correct: "b",
-      },
+        options: { a: "A correr siempre", b: "A esconderse", c: "A no viajar solo", d: "A mirar por la ventana y guardar el número de su mamá" },
+        correct: "d",
+      }
     ],
   },
   {
@@ -86,19 +86,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Nevaba en la ciudad?",
-        options: { a: "Sí, mucho", b: "No, nunca", c: "Solo a veces", d: "Solo en verano" },
-        correct: "b",
+        options: { a: "No, nunca", b: "Solo a veces", c: "Solo en verano", d: "Sí, mucho" },
+        correct: "a",
       },
       {
         question: "¿Con qué decoraron la fiesta?",
-        options: { a: "Con arena", b: "Con algodón y papel blanco", c: "Con globos rojos", d: "Con flores" },
-        correct: "b",
+        options: { a: "Con arena", b: "Con globos rojos", c: "Con algodón y papel blanco", d: "Con flores" },
+        correct: "c",
       },
       {
         question: "¿Qué aprendieron?",
-        options: { a: "Que el invierno es aburrido", b: "Que celebrar también es usar la imaginación", c: "Que no deben cantar", d: "Que deben cancelar la fiesta" },
-        correct: "b",
-      },
+        options: { a: "Que deben cancelar la fiesta", b: "Que no deben cantar", c: "Que el invierno es aburrido", d: "Que celebrar también es usar la imaginación" },
+        correct: "d",
+      }
     ],
   },
   {
@@ -111,19 +111,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Dónde vivía Rano?",
-        options: { a: "En un árbol", b: "En el estanque del parque", c: "En una casa", d: "En la montaña" },
-        correct: "b",
+        options: { a: "En el estanque del parque", b: "En un árbol", c: "En una casa", d: "En la montaña" },
+        correct: "a",
       },
       {
         question: "¿Con qué escribía poemas?",
-        options: { a: "Con tiza", b: "Con barro en las piedras", c: "Con lápiz", d: "Con pintura roja" },
-        correct: "b",
+        options: { a: "Con tiza", b: "Con pintura roja", c: "Con lápiz", d: "Con barro en las piedras" },
+        correct: "d",
       },
       {
         question: "¿Qué hacía la niña después?",
-        options: { a: "Vendía piedras", b: "Visitaba el estanque con un cuaderno", c: "Se mudaba", d: "Ignoraba al sapo" },
+        options: { a: "Se mudaba", b: "Visitaba el estanque con un cuaderno", c: "Ignoraba al sapo", d: "Vendía piedras" },
         correct: "b",
-      },
+      }
     ],
   },
   {
@@ -136,19 +136,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Qué problema causaba el despertador?",
-        options: { a: "No sonaba", b: "Despertaba a toda la casa", c: "Se rompía", d: "Marcaba mal la hora" },
+        options: { a: "Marcaba mal la hora", b: "Despertaba a toda la casa", c: "Se rompía", d: "No sonaba" },
         correct: "b",
       },
       {
         question: "¿Qué hizo Tina para mejorar?",
-        options: { a: "Tiró el reloj", b: "Bajó el volumen y preparó la ropa desde la noche", c: "Durmió en el patio", d: "No fue al colegio" },
-        correct: "b",
+        options: { a: "Tiró el reloj", b: "No fue al colegio", c: "Durmió en el patio", d: "Bajó el volumen y preparó la ropa desde la noche" },
+        correct: "d",
       },
       {
         question: "¿Qué le dejó su hermano?",
-        options: { a: "Un juguete", b: "Una nota de gracias", c: "Un libro", d: "Nada" },
-        correct: "b",
-      },
+        options: { a: "Nada", b: "Un libro", c: "Una nota de gracias", d: "Un juguete" },
+        correct: "c",
+      }
     ],
   },
   {
@@ -161,19 +161,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Qué había al final de la pista?",
-        options: { a: "Agua", b: "Lechuga", c: "Un trofeo de oro", d: "Un libro" },
-        correct: "b",
+        options: { a: "Lechuga", b: "Un trofeo de oro", c: "Agua", d: "Un libro" },
+        correct: "a",
       },
       {
         question: "¿Cuál era la regla importante?",
-        options: { a: "Empujar a los caracoles", b: "Esperar sin empujar", c: "Correr uno mismo", d: "Usar cronómetro" },
-        correct: "b",
+        options: { a: "Usar cronómetro", b: "Correr uno mismo", c: "Esperar sin empujar", d: "Empujar a los caracoles" },
+        correct: "c",
       },
       {
         question: "¿Qué dijo la maestra?",
-        options: { a: "Que ganó el más rápido", b: "Que la constancia llega antes que la prisa", c: "Que no jueguen más", d: "Que los caracoles no sirven" },
-        correct: "b",
-      },
+        options: { a: "Que ganó el más rápido", b: "Que los caracoles no sirven", c: "Que no jueguen más", d: "Que la constancia llega antes que la prisa" },
+        correct: "d",
+      }
     ],
   },
   {
@@ -186,19 +186,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Qué olvidó Marco?",
-        options: { a: "La fiesta", b: "Comprar un regalo", c: "Invitar amigos", d: "Su mochila" },
-        correct: "b",
+        options: { a: "La fiesta", b: "Su mochila", c: "Comprar un regalo", d: "Invitar amigos" },
+        correct: "c",
       },
       {
         question: "¿Qué regalo hizo?",
-        options: { a: "Una camiseta", b: "Una libreta decorada", c: "Un reloj", d: "Un balón" },
-        correct: "b",
+        options: { a: "Una camiseta", b: "Un balón", c: "Una libreta decorada", d: "Un reloj" },
+        correct: "c",
       },
       {
         question: "¿Qué prometió Marco?",
-        options: { a: "No hacer más regalos", b: "Poner un recordatorio en el calendario", c: "Olvidar cumpleaños", d: "Vender la libreta" },
+        options: { a: "Vender la libreta", b: "Poner un recordatorio en el calendario", c: "No hacer más regalos", d: "Olvidar cumpleaños" },
         correct: "b",
-      },
+      }
     ],
   },
   {
@@ -211,19 +211,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Dónde montó Vicente el telescopio?",
-        options: { a: "En la cocina", b: "En el patio", c: "En la escuela", d: "En el garaje" },
-        correct: "b",
+        options: { a: "En la escuela", b: "En la cocina", c: "En el garaje", d: "En el patio" },
+        correct: "d",
       },
       {
         question: "¿Qué vio al final?",
-        options: { a: "Un avión", b: "La luna llena", c: "Un cometa", d: "Un pájaro" },
+        options: { a: "Un pájaro", b: "La luna llena", c: "Un cometa", d: "Un avión" },
         correct: "b",
       },
       {
         question: "¿Qué aprendió Vicente?",
-        options: { a: "Que el telescopio no sirve", b: "Que observar requiere paciencia", c: "Que debe dormir temprano", d: "Que la luna no existe" },
-        correct: "b",
-      },
+        options: { a: "Que observar requiere paciencia", b: "Que el telescopio no sirve", c: "Que la luna no existe", d: "Que debe dormir temprano" },
+        correct: "a",
+      }
     ],
   },
   {
@@ -236,19 +236,19 @@ export const STORIES_PART3: StoryInput[] = [
     questions: [
       {
         question: "¿Qué llevó Paula?",
-        options: { a: "Una pelota", b: "Un rompecabezas", c: "Una planta", d: "Una guitarra" },
+        options: { a: "Una guitarra", b: "Un rompecabezas", c: "Una planta", d: "Una pelota" },
         correct: "b",
       },
       {
         question: "¿Qué hizo para atraer interés?",
-        options: { a: "Gritó", b: "Armó una esquina del rompecabezas", c: "Se fue", d: "Lo tiró" },
+        options: { a: "Se fue", b: "Armó una esquina del rompecabezas", c: "Gritó", d: "Lo tiró" },
         correct: "b",
       },
       {
         question: "¿Qué recibió a cambio?",
         options: { a: "Un libro de dinosaurios", b: "Un reloj", c: "Un helado", d: "Una lámpara" },
         correct: "a",
-      },
+      }
     ],
-  },
+  }
 ];

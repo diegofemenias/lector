@@ -27,7 +27,19 @@ import {
   adminSetUserDisplayName,
   adminDeleteUser,
 } from "./db";
-import { seedStoriesIfEmpty } from "./seed";
+import { ensureQuestionOptionsSynced, syncStories } from "./seed";
+
+let dataSyncPromise: Promise<void> | null = null;
+
+function ensureDataSynced(db: D1Database): Promise<void> {
+  if (!dataSyncPromise) {
+    dataSyncPromise = (async () => {
+      await syncStories(db);
+      await ensureQuestionOptionsSynced(db);
+    })();
+  }
+  return dataSyncPromise;
+}
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -95,6 +107,8 @@ app.get("/api/me", async (c) => {
       isAdmin: user.isAdmin,
       points: stats.points,
       storiesRead: stats.storiesRead,
+      totalStories: stats.totalStories,
+      unreadStories: stats.unreadStories,
     },
   });
 });
@@ -116,9 +130,13 @@ app.get("/api/story/random", async (c) => {
   const user = await getSessionUser(c.req.raw, c.env);
   if (!user) return json({ error: "No autenticado" }, 401);
   if (!user.displayName) return json({ error: "Nombre requerido" }, 403);
-  const story = await getRandomStory(c.env.DB);
+  const story = await getRandomStory(c.env.DB, user.id);
   if (!story) return json({ error: "No hay cuentos disponibles" }, 404);
-  return json({ story });
+  return json({
+    story: story.story,
+    isRepeat: story.isRepeat,
+    unreadRemaining: story.unreadRemaining,
+  });
 });
 
 app.get("/api/story/:id", async (c) => {
@@ -146,7 +164,7 @@ app.post("/api/story/:id/submit", async (c) => {
   try {
     const result = await submitAnswers(c.env.DB, user.id, storyId, answers);
     const stats = await getUserStats(c.env.DB, user.id);
-    return json({ ...result, totalPoints: stats.points, storiesRead: stats.storiesRead });
+    return json({ ...result, totalPoints: stats.points, storiesRead: stats.storiesRead, unreadStories: stats.unreadStories, totalStories: stats.totalStories });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Error" }, 400);
   }
@@ -214,7 +232,7 @@ app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    await seedStoriesIfEmpty(env.DB);
+    ctx.waitUntil(ensureDataSynced(env.DB));
     return app.fetch(request, env, ctx);
   },
 };

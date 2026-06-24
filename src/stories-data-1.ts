@@ -11,19 +11,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Dónde vivía Michi?",
-        options: { a: "En una casa de campo", b: "En un edificio antiguo", c: "En una tienda", d: "En el bosque" },
-        correct: "b",
+        options: { a: "En el bosque", b: "En una tienda", c: "En una casa de campo", d: "En un edificio antiguo" },
+        correct: "d",
       },
       {
         question: "¿Qué perdió doña Rosa?",
-        options: { a: "Su llave", b: "Su gato", c: "Su torta de chocolate", d: "Su libro" },
+        options: { a: "Su llave", b: "Su libro", c: "Su torta de chocolate", d: "Su gato" },
         correct: "c",
       },
       {
         question: "¿Quién se había llevado parte de la torta?",
-        options: { a: "Un perro", b: "Un ratón", c: "Un pájaro", d: "Un niño" },
-        correct: "c",
-      },
+        options: { a: "Un pájaro", b: "Un niño", c: "Un perro", d: "Un ratón" },
+        correct: "a",
+      }
     ],
   },
   {
@@ -36,19 +36,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿De qué tenía miedo la semilla?",
-        options: { a: "De salir de la tierra", b: "De los pájaros", c: "Del jardín", d: "De las flores" },
-        correct: "a",
+        options: { a: "De las flores", b: "De los pájaros", c: "Del jardín", d: "De salir de la tierra" },
+        correct: "d",
       },
       {
         question: "¿Quién la animó a intentarlo?",
-        options: { a: "Una mariposa", b: "Una gota de agua", c: "Un niño", d: "El viento" },
-        correct: "b",
+        options: { a: "Una mariposa", b: "Un niño", c: "Una gota de agua", d: "El viento" },
+        correct: "c",
       },
       {
         question: "¿En qué se convirtió la semilla?",
-        options: { a: "En un árbol", b: "En un cactus", c: "En un girasol", d: "En hierba" },
-        correct: "c",
-      },
+        options: { a: "En un cactus", b: "En un girasol", c: "En un árbol", d: "En hierba" },
+        correct: "b",
+      }
     ],
   },
   {
@@ -61,19 +61,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Qué debía hacer Beep según su programación?",
-        options: { a: "Pintar paredes", b: "Ordenar tornillos", c: "Cocinar", d: "Cantar" },
-        correct: "b",
+        options: { a: "Cocinar", b: "Pintar paredes", c: "Cantar", d: "Ordenar tornillos" },
+        correct: "d",
       },
       {
         question: "¿Qué le fascinaba a Beep?",
-        options: { a: "El color del cielo", b: "Los coches", c: "La lluvia", d: "Los libros" },
-        correct: "a",
+        options: { a: "Los libros", b: "La lluvia", c: "El color del cielo", d: "Los coches" },
+        correct: "c",
       },
       {
         question: "¿Cómo ayudó Beep a los demás?",
-        options: { a: "Encontró una linterna", b: "Arregló la luz", c: "Llamó al jefe", d: "Abrió la puerta" },
-        correct: "a",
-      },
+        options: { a: "Llamó al jefe", b: "Encontró una linterna", c: "Arregló la luz", d: "Abrió la puerta" },
+        correct: "b",
+      }
     ],
   },
   {
@@ -86,8 +86,8 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Dónde hicieron el picnic?",
-        options: { a: "En la playa", b: "En el patio", c: "En el parque", d: "En la escuela" },
-        correct: "b",
+        options: { a: "En el patio", b: "En la escuela", c: "En el parque", d: "En la playa" },
+        correct: "a",
       },
       {
         question: "¿Qué brillaba como una lámpara gigante?",
@@ -96,9 +96,9 @@ export const STORIES: StoryInput[] = [
       },
       {
         question: "¿Qué vieron en el cielo?",
-        options: { a: "Un avión", b: "Un cometa", c: "Una estrella fugaz", d: "Un globo" },
-        correct: "c",
-      },
+        options: { a: "Un avión", b: "Una estrella fugaz", c: "Un globo", d: "Un cometa" },
+        correct: "b",
+      }
     ],
   },
   {
@@ -111,19 +111,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Dónde encontró Lucas el mapa?",
-        options: { a: "En la cocina", b: "En un libro del abuelo", c: "En la escuela", d: "En la calle" },
-        correct: "b",
-      },
-      {
-        question: "¿Qué había dentro de la lata?",
-        options: { a: "Dulces", b: "Llaves", c: "Monedas de juguete y una nota", d: "Flores" },
+        options: { a: "En la cocina", b: "En la escuela", c: "En un libro del abuelo", d: "En la calle" },
         correct: "c",
       },
       {
-        question: "¿Qué decía la nota?",
-        options: { a: "Corre rápido", b: "El verdadero tesoro es la aventura", c: "Vende las monedas", d: "No digas nada" },
-        correct: "b",
+        question: "¿Qué había dentro de la lata?",
+        options: { a: "Llaves", b: "Flores", c: "Dulces", d: "Monedas de juguete y una nota" },
+        correct: "d",
       },
+      {
+        question: "¿Qué decía la nota?",
+        options: { a: "Vende las monedas", b: "El verdadero tesoro es la aventura", c: "No digas nada", d: "Corre rápido" },
+        correct: "b",
+      }
     ],
   },
   {
@@ -136,19 +136,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Cómo sonaba el canto de Wila?",
-        options: { a: "Como truenos", b: "Como campanitas", c: "Como silbidos", d: "Como tambores" },
-        correct: "b",
+        options: { a: "Como silbidos", b: "Como truenos", c: "Como tambores", d: "Como campanitas" },
+        correct: "d",
       },
       {
         question: "¿Qué problema tenía el barco?",
-        options: { a: "Se hundía", b: "Estaba sin comida", c: "Se perdió en la niebla", d: "No tenía velas" },
-        correct: "c",
+        options: { a: "No tenía velas", b: "Se perdió en la niebla", c: "Se hundía", d: "Estaba sin comida" },
+        correct: "b",
       },
       {
         question: "¿Qué hizo Wila para ayudar?",
-        options: { a: "Empujó el barco", b: "Cantó para guiarlos", c: "Llamó a otros barcos", d: "Encendió una luz" },
-        correct: "b",
-      },
+        options: { a: "Encendió una luz", b: "Llamó a otros barcos", c: "Cantó para guiarlos", d: "Empujó el barco" },
+        correct: "c",
+      }
     ],
   },
   {
@@ -161,19 +161,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Qué le faltaba a Emma?",
-        options: { a: "La mochila", b: "Un zapato", c: "El cuaderno", d: "El abrigo" },
-        correct: "b",
+        options: { a: "Un zapato", b: "La mochila", c: "El cuaderno", d: "El abrigo" },
+        correct: "a",
       },
       {
         question: "¿Dónde buscó el zapato?",
-        options: { a: "Solo en su casa", b: "En la panadería, plaza y biblioteca", c: "En el bosque", d: "En la playa" },
+        options: { a: "En la playa", b: "En la panadería, plaza y biblioteca", c: "En el bosque", d: "Solo en su casa" },
         correct: "b",
       },
       {
         question: "¿Quién encontró el zapato?",
-        options: { a: "Su mamá", b: "Su maestra", c: "Su perro Coco", d: "Un vecino" },
-        correct: "c",
-      },
+        options: { a: "Su perro Coco", b: "Un vecino", c: "Su maestra", d: "Su mamá" },
+        correct: "a",
+      }
     ],
   },
   {
@@ -186,19 +186,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Qué figura favorita hacía Mateo?",
-        options: { a: "Un barco", b: "Un faro", c: "Una flor", d: "Un avión" },
-        correct: "b",
+        options: { a: "Un barco", b: "Una flor", c: "Un faro", d: "Un avión" },
+        correct: "c",
       },
       {
         question: "¿Por qué le enseñó a su hermana?",
-        options: { a: "Porque ella tenía miedo de las tormentas", b: "Porque era un deber", c: "Porque perdió su juguete", d: "Porque quería jugar afuera" },
+        options: { a: "Porque ella tenía miedo de las tormentas", b: "Porque perdió su juguete", c: "Porque quería jugar afuera", d: "Porque era un deber" },
         correct: "a",
       },
       {
         question: "¿Qué dijo la niña sobre la luz más segura?",
-        options: { a: "Era la del sol", b: "Era la de la lámpara", c: "Era la que inventaban juntos", d: "Era la de la luna" },
-        correct: "c",
-      },
+        options: { a: "Era la que inventaban juntos", b: "Era la de la luna", c: "Era la de la lámpara", d: "Era la del sol" },
+        correct: "a",
+      }
     ],
   },
   {
@@ -211,19 +211,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Cómo era Lili?",
-        options: { a: "Desordenada", b: "Muy ordenada", c: "Perezosa", d: "Tímida" },
-        correct: "b",
+        options: { a: "Tímida", b: "Desordenada", c: "Muy ordenada", d: "Perezosa" },
+        correct: "c",
       },
       {
         question: "¿Qué pasó cuando llovió fuerte?",
-        options: { a: "Se perdieron", b: "El túnel de Lili estaba seco y con comida", c: "Se fueron del hormiguero", d: "No pasó nada" },
-        correct: "b",
+        options: { a: "El túnel de Lili estaba seco y con comida", b: "No pasó nada", c: "Se perdieron", d: "Se fueron del hormiguero" },
+        correct: "a",
       },
       {
         question: "¿Qué aprendieron las otras hormigas?",
-        options: { a: "Que planificar ayuda", b: "Que no deben comer", c: "Que deben dormir más", d: "Que deben esconderse" },
-        correct: "a",
-      },
+        options: { a: "Que no deben comer", b: "Que deben dormir más", c: "Que deben esconderse", d: "Que planificar ayuda" },
+        correct: "d",
+      }
     ],
   },
   {
@@ -236,19 +236,19 @@ export const STORIES: StoryInput[] = [
     questions: [
       {
         question: "¿Quién era el maquinista del tren?",
-        options: { a: "Un gato", b: "Un búho con gorra", c: "Un conejo", d: "Un oso" },
-        correct: "b",
+        options: { a: "Un oso", b: "Un gato", c: "Un búho con gorra", d: "Un conejo" },
+        correct: "c",
       },
       {
         question: "¿Qué llevaban los vagones?",
-        options: { a: "Juguetes", b: "Libros", c: "Sueños doblados", d: "Ropa" },
+        options: { a: "Juguetes", b: "Ropa", c: "Sueños doblados", d: "Libros" },
         correct: "c",
       },
       {
         question: "¿Qué hacía Nico antes de dormir?",
-        options: { a: "Elegía un sueño", b: "Contaba hasta mil", c: "Leía dos horas", d: "Salía a correr" },
-        correct: "a",
-      },
+        options: { a: "Salía a correr", b: "Contaba hasta mil", c: "Elegía un sueño", d: "Leía dos horas" },
+        correct: "c",
+      }
     ],
-  },
+  }
 ];

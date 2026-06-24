@@ -37,14 +37,22 @@ export async function setDisplayName(
 export async function getUserStats(
   db: D1Database,
   userId: string
-): Promise<{ points: number; storiesRead: number }> {
+): Promise<{ points: number; storiesRead: number; totalStories: number; unreadStories: number }> {
   const row = await db
     .prepare(
       "SELECT COALESCE(SUM(points), 0) as points, COUNT(*) as stories_read FROM story_attempts WHERE user_id = ?"
     )
     .bind(userId)
     .first<{ points: number; stories_read: number }>();
-  return { points: row?.points ?? 0, storiesRead: row?.stories_read ?? 0 };
+  const totalRow = await db.prepare("SELECT COUNT(*) as c FROM stories").first<{ c: number }>();
+  const totalStories = totalRow?.c ?? 0;
+  const storiesRead = row?.stories_read ?? 0;
+  return {
+    points: row?.points ?? 0,
+    storiesRead,
+    totalStories,
+    unreadStories: Math.max(0, totalStories - storiesRead),
+  };
 }
 
 export async function getRanking(db: D1Database): Promise<RankingEntry[]> {
@@ -147,9 +155,28 @@ export async function getStoryById(db: D1Database, storyId: number): Promise<Sto
   return assembleStory(story, questions.results ?? []);
 }
 
-export async function getRandomStory(db: D1Database): Promise<StoryPublic | null> {
-  const story = await db
-    .prepare("SELECT id, title, paragraph1, paragraph2, paragraph3 FROM stories ORDER BY RANDOM() LIMIT 1")
+export async function getRandomStory(
+  db: D1Database,
+  userId: string
+): Promise<{ story: StoryPublic; isRepeat: boolean; unreadRemaining: number } | null> {
+  const totalRow = await db.prepare("SELECT COUNT(*) as c FROM stories").first<{ c: number }>();
+  const totalStories = totalRow?.c ?? 0;
+  if (totalStories === 0) return null;
+
+  const readRow = await db
+    .prepare("SELECT COUNT(*) as c FROM story_attempts WHERE user_id = ?")
+    .bind(userId)
+    .first<{ c: number }>();
+  const readCount = readRow?.c ?? 0;
+  const unreadCount = totalStories - readCount;
+
+  let story = await db
+    .prepare(
+      `SELECT id, title, paragraph1, paragraph2, paragraph3 FROM stories
+       WHERE id NOT IN (SELECT story_id FROM story_attempts WHERE user_id = ?)
+       ORDER BY RANDOM() LIMIT 1`
+    )
+    .bind(userId)
     .first<{
       id: number;
       title: string;
@@ -157,10 +184,32 @@ export async function getRandomStory(db: D1Database): Promise<StoryPublic | null
       paragraph2: string;
       paragraph3: string;
     }>();
+
+  const isRepeat = story == null;
+
+  if (!story) {
+    story = await db
+      .prepare(
+        "SELECT id, title, paragraph1, paragraph2, paragraph3 FROM stories ORDER BY RANDOM() LIMIT 1"
+      )
+      .first<{
+        id: number;
+        title: string;
+        paragraph1: string;
+        paragraph2: string;
+        paragraph3: string;
+      }>();
+  }
+
   if (!story) return null;
 
   const questions = await fetchStoryQuestions(db, story.id);
-  return assembleStory(story, questions.results ?? []);
+
+  return {
+    story: assembleStory(story, questions.results ?? []),
+    isRepeat,
+    unreadRemaining: isRepeat ? 0 : unreadCount,
+  };
 }
 
 export async function submitAnswers(
