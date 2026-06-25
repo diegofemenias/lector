@@ -1,6 +1,7 @@
 import type { RankingEntry, ReaderLevel, StoryPublic } from "./types";
 import { buildVocabularyForStory } from "./vocabulary";
 import { RANKING_SQLITE_OFFSET } from "./ranking-day";
+import { getReaderById } from "./readers";
 
 const vocabularyCache = new Map<number, Record<string, string>>();
 
