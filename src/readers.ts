@@ -115,14 +115,15 @@ export async function listReadersForAccount(
 ): Promise<ReaderPublic[]> {
   const rows = await db
     .prepare(
-      `SELECT r.id, r.account_id, r.display_name, r.level, r.created_at,
-              COALESCE(SUM(a.points), 0) as points_total,
-              COALESCE(SUM(CASE WHEN s.level = r.level THEN 1 ELSE 0 END), 0) as stories_read_level
+      `SELECT r.id, r.account_id, r.display_name, r.level, r.created_at, r.points_total,
+              (
+                SELECT COUNT(*)
+                FROM story_attempts a
+                INNER JOIN stories s ON s.id = a.story_id
+                WHERE a.reader_id = r.id AND s.level = r.level
+              ) as stories_read_level
        FROM readers r
-       LEFT JOIN story_attempts a ON a.reader_id = r.id
-       LEFT JOIN stories s ON s.id = a.story_id
        WHERE r.account_id = ?
-       GROUP BY r.id
        ORDER BY r.created_at ASC`
     )
     .bind(accountId)
@@ -161,18 +162,18 @@ export async function getReaderById(
   readerId: string,
   accountId?: string
 ): Promise<ReaderPublic | null> {
+  const readerSelect = `SELECT r.id, r.account_id, r.display_name, r.level, r.created_at, r.points_total,
+              (
+                SELECT COUNT(*)
+                FROM story_attempts a
+                INNER JOIN stories s ON s.id = a.story_id
+                WHERE a.reader_id = r.id AND s.level = r.level
+              ) as stories_read_level
+           FROM readers r`;
+
   const row = accountId
     ? await db
-        .prepare(
-          `SELECT r.id, r.account_id, r.display_name, r.level, r.created_at,
-                  COALESCE(SUM(a.points), 0) as points_total,
-                  COALESCE(SUM(CASE WHEN s.level = r.level THEN 1 ELSE 0 END), 0) as stories_read_level
-           FROM readers r
-           LEFT JOIN story_attempts a ON a.reader_id = r.id
-           LEFT JOIN stories s ON s.id = a.story_id
-           WHERE r.id = ? AND r.account_id = ?
-           GROUP BY r.id`
-        )
+        .prepare(`${readerSelect} WHERE r.id = ? AND r.account_id = ?`)
         .bind(readerId, accountId)
         .first<{
           id: string;
@@ -184,16 +185,7 @@ export async function getReaderById(
           stories_read_level: number;
         }>()
     : await db
-        .prepare(
-          `SELECT r.id, r.account_id, r.display_name, r.level, r.created_at,
-                  COALESCE(SUM(a.points), 0) as points_total,
-                  COALESCE(SUM(CASE WHEN s.level = r.level THEN 1 ELSE 0 END), 0) as stories_read_level
-           FROM readers r
-           LEFT JOIN story_attempts a ON a.reader_id = r.id
-           LEFT JOIN stories s ON s.id = a.story_id
-           WHERE r.id = ?
-           GROUP BY r.id`
-        )
+        .prepare(`${readerSelect} WHERE r.id = ?`)
         .bind(readerId)
         .first<{
           id: string;
@@ -334,12 +326,10 @@ export async function listAdminReaders(db: D1Database): Promise<AdminReaderRow[]
          r.level,
          r.account_id,
          u.email,
-         COALESCE(SUM(a.points), 0) as points_total,
-         COUNT(a.story_id) as stories_read
+         r.points_total,
+         (SELECT COUNT(*) FROM story_attempts a WHERE a.reader_id = r.id) as stories_read
        FROM readers r
        JOIN users u ON u.id = r.account_id
-       LEFT JOIN story_attempts a ON a.reader_id = r.id
-       GROUP BY r.id
        ORDER BY r.display_name COLLATE NOCASE ASC`
     )
     .all<{
@@ -368,26 +358,26 @@ export async function getReaderStatsForLevel(
   readerId: string,
   level: ReaderLevel
 ): Promise<{ points: number; storiesRead: number; totalStories: number; unreadStories: number }> {
-  const pointsRow = await db
+  const row = await db
     .prepare(
-      `SELECT COALESCE(SUM(a.points), 0) as points, COUNT(a.story_id) as stories_read
-       FROM story_attempts a
-       JOIN stories s ON s.id = a.story_id
-       WHERE a.reader_id = ? AND s.level = ?`
+      `SELECT r.points_total,
+              (
+                SELECT COUNT(*)
+                FROM story_attempts a
+                INNER JOIN stories s ON s.id = a.story_id
+                WHERE a.reader_id = r.id AND s.level = ?
+              ) as stories_read
+       FROM readers r
+       WHERE r.id = ?`
     )
-    .bind(readerId, level)
-    .first<{ points: number; stories_read: number }>();
+    .bind(level, readerId)
+    .first<{ points_total: number; stories_read: number }>();
 
   const totalStories = await getStoryCountForLevel(db, level);
-  const storiesRead = pointsRow?.stories_read ?? 0;
-
-  const allPointsRow = await db
-    .prepare("SELECT COALESCE(SUM(points), 0) as p FROM story_attempts WHERE reader_id = ?")
-    .bind(readerId)
-    .first<{ p: number }>();
+  const storiesRead = row?.stories_read ?? 0;
 
   return {
-    points: allPointsRow?.p ?? 0,
+    points: row?.points_total ?? 0,
     storiesRead,
     totalStories,
     unreadStories: Math.max(0, totalStories - storiesRead),

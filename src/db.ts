@@ -1,6 +1,6 @@
 import type { RankingEntry, ReaderLevel, StoryPublic } from "./types";
 import { buildVocabularyForStory } from "./vocabulary";
-import { RANKING_SQLITE_OFFSET } from "./ranking-day";
+import { RANKING_TODAY_SQL, applyReaderPointsDelta } from "./reader-points";
 import { getReaderById } from "./readers";
 
 const vocabularyCache = new Map<number, Record<string, string>>();
@@ -38,17 +38,15 @@ export async function getRanking(db: D1Database): Promise<RankingEntry[]> {
   const rows = await db
     .prepare(
       `SELECT
-         r.display_name,
-         COALESCE(SUM(a.points), 0) as points_total,
-         COALESCE(SUM(
-           CASE WHEN date(a.completed_at, ?) = date('now', ?) THEN a.points ELSE 0 END
-         ), 0) as points_today
-       FROM readers r
-       LEFT JOIN story_attempts a ON a.reader_id = r.id
-       GROUP BY r.id
-       ORDER BY points_total DESC, points_today DESC, r.display_name ASC`
+         display_name,
+         points_total,
+         CASE
+           WHEN points_today_date = ${RANKING_TODAY_SQL} THEN points_today
+           ELSE 0
+         END as points_today
+       FROM readers
+       ORDER BY points_total DESC, points_today DESC, display_name ASC`
     )
-    .bind(RANKING_SQLITE_OFFSET, RANKING_SQLITE_OFFSET)
     .all<{ display_name: string; points_total: number; points_today: number }>();
 
   return (rows.results ?? []).map((row, i) => ({
@@ -279,6 +277,10 @@ export async function submitAnswers(
       .run();
   }
 
+  if (pointsAdded > 0) {
+    await applyReaderPointsDelta(db, readerId, pointsAdded);
+  }
+
   return {
     points,
     pointsRecorded,
@@ -295,7 +297,7 @@ export async function getAdminStats(db: D1Database) {
   const stories = await db.prepare("SELECT COUNT(*) as c FROM stories").first<{ c: number }>();
   const attempts = await db.prepare("SELECT COUNT(*) as c FROM story_attempts").first<{ c: number }>();
   const totalPoints = await db
-    .prepare("SELECT COALESCE(SUM(points), 0) as p FROM story_attempts")
+    .prepare("SELECT COALESCE(SUM(points_total), 0) as p FROM readers")
     .first<{ p: number }>();
 
   const recent = await db
