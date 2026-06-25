@@ -135,6 +135,10 @@ body {
   animation: pop 0.35s ease;
 }
 
+.card--instant {
+  animation: none;
+}
+
 @keyframes pop {
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to { opacity: 1; transform: none; }

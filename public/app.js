@@ -2,13 +2,17 @@ const app = document.getElementById("app");
 const nav = document.getElementById("nav");
 const navToggle = document.getElementById("nav-toggle");
 
-import {
-  enrichText,
-  setVocabulary,
-  bindVocabularyClicks,
-} from "./vocabulary.js";
+let vocabularyApi = null;
+let vocabularyClicksBound = false;
 
-bindVocabularyClicks(app);
+async function loadVocabularyApi() {
+  if (!vocabularyApi) vocabularyApi = await import("./vocabulary.js");
+  if (!vocabularyClicksBound) {
+    vocabularyApi.bindVocabularyClicks(app);
+    vocabularyClicksBound = true;
+  }
+  return vocabularyApi;
+}
 
 const LEVEL_LABELS = {
   1: "1° nivel",
@@ -102,7 +106,7 @@ function renderNav() {
 
 function renderLogin(error) {
   app.innerHTML = `
-    <section class="card stack login-card">
+    <section class="card card--instant stack login-card">
       ${error ? `<div class="error-banner">${escapeHtml(error)}</div>` : ""}
       <h1 class="hero-title hero-title-landing">¡A leer se ha dicho!</h1>
       <div class="login-actions">
@@ -115,6 +119,16 @@ function renderLogin(error) {
       </p>
     </section>
   `;
+}
+
+function showLoginError(error) {
+  if (!error) return;
+  const shell = document.getElementById("login-shell");
+  if (!shell || shell.querySelector(".error-banner")) return;
+  shell.insertAdjacentHTML(
+    "afterbegin",
+    `<div class="error-banner">${escapeHtml(error)}</div>`
+  );
 }
 
 function renderReaderPicker() {
@@ -232,7 +246,8 @@ function renderHome() {
   `;
 }
 
-function renderStory() {
+async function renderStory() {
+  const { enrichText, setVocabulary } = await loadVocabularyApi();
   const s = state.story;
   const vocab = s.vocabulary || null;
   setVocabulary(vocab);
@@ -381,7 +396,7 @@ async function loadStory() {
   const data = await api("/api/story/random");
   state.story = data.story;
   state.storyMeta = { isRepeat: data.isRepeat, unreadRemaining: data.unreadRemaining };
-  renderStory();
+  await renderStory();
 }
 
 async function activateReader(readerId) {
@@ -414,7 +429,10 @@ async function bootstrap() {
     state.account = null;
     state.reader = null;
     renderNav();
-    renderLogin(authError);
+    if (authError) {
+      if (document.getElementById("login-shell")) showLoginError(authError);
+      else renderLogin(authError);
+    }
     return;
   }
 

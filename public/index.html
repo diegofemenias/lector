@@ -6,7 +6,23 @@
   <title>Mini Lectores — Aventuras de lectura</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link
+    rel="preload"
+    as="style"
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Nunito:wght@400;700&display=swap"
+  />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Nunito:wght@400;700&display=swap"
+    media="print"
+    onload="this.media='all'"
+  />
+  <noscript>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Nunito:wght@400;700&display=swap"
+    />
+  </noscript>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -33,9 +49,20 @@
     <nav id="nav" class="nav hidden" aria-label="Menú principal"></nav>
   </header>
 
-  <main id="app" class="container"></main>
+  <main id="app" class="container">
+    <section class="card card--instant stack login-card" id="login-shell" aria-label="Inicio de sesión">
+      <h1 class="hero-title hero-title-landing">¡A leer se ha dicho!</h1>
+      <div class="login-actions">
+        <a class="btn btn-google btn-google-hero" href="/auth/google">🔐 Entrar con Google</a>
+      </div>
+      <p class="login-promo-text">
+        <span class="promo-word promo-read">Lee cuentos cortos</span>,
+        <span class="promo-word promo-quiz">responde preguntas</span> y
+        <span class="promo-word promo-rank">subí en el ranking</span>.
+      </p>
+    </section>
+  </main>
 
-  <script src="/vocabulary.js" type="module"></script>
   <script src="/app.js" type="module"></script>
 </body>
 </html>
