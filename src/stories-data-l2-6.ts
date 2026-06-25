@@ -17,7 +17,7 @@ export const STORIES_L2_PART6: StoryInput[] = [
       },
       {
         question: "¿Qué indica el nivel F5 en la escala Fujita?",
-        options: { a: "Viento débil", b: "Solo niebla", c: "Nieve ligera", d: "Destrucción extrema" },
+        options: { a: "Viento débil", b: "Solo niebla", c: "Nieve ligera", d: "Arrancar casas de sus cimientos" },
         correct: "d",
       },
       {

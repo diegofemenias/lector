@@ -69,7 +69,7 @@ export const STORIES_L2_PART2: StoryInput[] = [
       },
       {
         question: "¿Qué habilidad destaca al jaguar cerca del agua?",
-        options: { a: "Volar sobre el río", b: "Excavar túneles largos", c: "Nadar y cazar en ríos", d: "Construir presas" },
+        options: { a: "Volar sobre el río", b: "Excavar túneles largos", c: "Nadar y cazar cerca de ríos", d: "Construir presas" },
         correct: "c",
       },
       {

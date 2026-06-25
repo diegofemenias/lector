@@ -1,13 +1,12 @@
 import type { StoryInput } from "./types";
+import { ALL_STORIES } from "./all-stories";
 import { STORIES } from "./stories-data";
 import { STORIES_L2 } from "./stories-data-l2";
 import { STORIES_L3 } from "./stories-data-l3";
 import { invalidateStoryCountCache } from "./readers";
 
-const ALL_STORIES: StoryInput[] = [...STORIES, ...STORIES_L2, ...STORIES_L3];
-
 /** Incrementar al agregar cuentos o cambiar preguntas en producción. */
-export const DATA_SYNC_VERSION = 4;
+export const DATA_SYNC_VERSION = 5;
 
 const META_DATA_SYNC = "data_sync_version";
 
@@ -255,4 +254,4 @@ export async function seedStoriesIfEmpty(db: D1Database): Promise<boolean> {
 }
 
 export { STORIES, STORIES_L2, STORIES_L3, ALL_STORIES };
-export type { StoryInput };
+export type { StoryInput } from "./types";

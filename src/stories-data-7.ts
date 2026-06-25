@@ -146,8 +146,8 @@ export const STORIES_PART7: StoryInput[] = [
       },
       {
         question: "¿En qué intento entró al ritmo?",
-        options: { a: "En el segundo", b: "Nunca", c: "En el tercero", d: "En el primero" },
-        correct: "c",
+        options: { a: "En el tercer intento", b: "Nunca", c: "En el tercero", d: "En el primero" },
+        correct: "a",
       }
     ],
   },

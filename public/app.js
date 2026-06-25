@@ -16,6 +16,12 @@ const LEVEL_LABELS = {
   3: "3° nivel",
 };
 
+const LEVEL_AGE_RANGES = {
+  1: "6 y 7",
+  2: "8 y 9",
+  3: "10 y 12",
+};
+
 const READER_CARD_COLORS = 4;
 
 let state = {
@@ -205,7 +211,7 @@ function renderHome() {
     : allRead
       ? `¡Leíste todos los cuentos de ${LEVEL_LABELS[r.level].toLowerCase()}! Podés repasar uno al azar.`
       : unread > 0
-        ? `Te quedan <strong>${unread}</strong> cuento${unread === 1 ? "" : "s"} nuevo${unread === 1 ? "" : "s"} de ${LEVEL_LABELS[r.level].toLowerCase()}.`
+        ? `Te quedan <strong>${unread}</strong> cuento${unread === 1 ? "" : "s"} nuevo${unread === 1 ? "" : "s"} por leer para el ${LEVEL_LABELS[r.level]} — edad entre ${LEVEL_AGE_RANGES[r.level]} años.`
         : "Te toca un cuento al azar. Léelo con calma y responde las 3 preguntas.";
 
   app.innerHTML = `
@@ -214,7 +220,6 @@ function renderHome() {
         <h2>Hola, ${escapeHtml(r.displayName)} 👋</h2>
         <span class="badge">${r.points} puntos · ${r.storiesRead} cuentos (${LEVEL_LABELS[r.level]})</span>
       </div>
-      ${levelSwitcherHtml()}
       <p class="subtitle">${progressText}</p>
       <div class="points-breakdown">
         <span class="chip">+1 leer</span>
@@ -452,7 +457,11 @@ async function handleAction(action, el) {
   }
   if (action === "set-level") {
     const level = Number(el.dataset.level);
-    if (level !== state.reader?.level) await changeLevel(level);
+    if (level !== state.reader?.level) {
+      const ok = confirm("¿Estás seguro que quieres cambiar a este lector de nivel?");
+      if (!ok) return;
+      await changeLevel(level);
+    }
     return;
   }
   if (!hasActiveReader()) {

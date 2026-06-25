@@ -7,7 +7,7 @@ export const STORIES_L2_PART5: StoryInput[] = [
     paragraphs: [
       "Marie Curie nació en Polonia en mil ochocientos sesenta y siete y se mudó a París para estudiar física y química. Junto a su esposo Pierre investigó minerales que emitían una energía misteriosa sin calentarse. En mil ochocientos noventa y ocho descubrieron dos elementos nuevos: el polonio, nombrado así por su país natal, y el radio, que brilla en la oscuridad por su radiactividad.",
       "Marie fue la primera persona en ganar dos premios Nobel en distintas ciencias: Física en mil novecientos tres y Química en mil novecientos once. Su trabajo abrió caminos para la medicina nuclear, los rayos X y el tratamiento de tumores. Trabajaba en un cobertizo frío con pocos recursos, mezclando toneladas de pechblenda para obtener apenas unos gramos de radio puro.",
-      "La radiactividad que estudió también dañó su salud, porque entonces no se conocían los peligros de la exposición prolongada. Hoy sus cuadernos se guardan en cajas de plomo en bibliotecas de Francia. Su historia muestra que la curiosidad científica puede cambiar el mundo, pero también que hay que usar el conocimiento con responsabilidad y protección.",
+      "La radiactividad que estudió también dañó su salud, porque entonces no se conocían los peligros de la exposición prolongada. Hoy sus cuadernos siguen siendo radiactivos y se guardan en cajas de plomo en bibliotecas de Francia. Su historia muestra que la curiosidad científica puede cambiar el mundo, pero también que hay que usar el conocimiento con responsabilidad y protección.",
     ],
     questions: [
       {
@@ -220,7 +220,7 @@ export const STORIES_L2_PART5: StoryInput[] = [
     questions: [
       {
         question: "¿Cómo se llama la famosa fotografía de ADN tomada por Franklin?",
-        options: { a: "Foto número 51", b: "Foto número 10", c: "Foto número 100", d: "Foto número 7" },
+        options: { a: "Foto número cincuenta y uno", b: "Foto número 10", c: "Foto número 100", d: "Foto número 7" },
         correct: "a",
       },
       {

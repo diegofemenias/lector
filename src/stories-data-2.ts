@@ -166,7 +166,7 @@ export const STORIES_PART2: StoryInput[] = [
       },
       {
         question: "¿Qué error cometió al principio?",
-        options: { a: "No usó harina", b: "Olvidó el horno", c: "Quemó la cocina", d: "Usó demasiada sal" },
+        options: { a: "No usó harina", b: "Olvidó el horno", c: "Quemó la cocina", d: "Usó mucha sal" },
         correct: "d",
       },
       {

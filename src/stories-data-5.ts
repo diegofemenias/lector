@@ -11,7 +11,7 @@ export const STORIES_PART5: StoryInput[] = [
     questions: [
       {
         question: "¿Qué le pasó al sombrero de la maestra?",
-        options: { a: "Voló y quedó en un árbol", b: "Se mojó", c: "Se rompió", d: "Se perdió en el salón" },
+        options: { a: "Quedó en un árbol", b: "Se mojó", c: "Se rompió", d: "Se perdió en el salón" },
         correct: "a",
       },
       {

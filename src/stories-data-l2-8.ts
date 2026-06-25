@@ -69,7 +69,7 @@ export const STORIES_L2_PART8: StoryInput[] = [
       },
       {
         question: "¿Qué cuenta un jeroglífico en las paredes?",
-        options: { a: "Solo dibujos sin sentido", b: "Información sobre la vida y el poder", c: "Recetas de helado", d: "Horarios de trenes" },
+        options: { a: "Solo dibujos sin sentido", b: "Victorias militares y ofrendas a los dioses", c: "Recetas de helado", d: "Horarios de trenes" },
         correct: "b",
       },
       {

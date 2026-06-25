@@ -5,13 +5,13 @@ export const STORIES_PART9: StoryInput[] = [
     title: "El globo aerostático",
     paragraphs: [
       "En el festival del pueblo apareció un globo aerostático enorme con franjas rojas y amarillas. Se inflaba con fuego controlado al amanecer.",
-      "No subieron, pero el piloto les explicó cómo funciona el aire caliente. Los niños tocaban la canasta de mimbre con respeto.",
-      "Dibujaron el globo desde varios ángulos. Acordaron que volar también puede ser mirar desde abajo con admiración.",
+      "No subieron al globo, pero el piloto les explicó cómo funciona el aire caliente. Los niños tocaban la canasta de mimbre con respeto.",
+      "Solo miraron y dibujaron el globo desde varios ángulos. Acordaron que volar también puede ser mirar desde abajo con admiración.",
     ],
     questions: [
       {
         question: "¿De qué colores era el globo?",
-        options: { a: "Morado solo", b: "Rojo y amarillo", c: "Azul y verde", d: "Negro y blanco" },
+        options: { a: "Morado solo", b: "Rojas y amarillas", c: "Azul y verde", d: "Negro y blanco" },
         correct: "b",
       },
       {

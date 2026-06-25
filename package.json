@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:stories": "tsx scripts/validate-stories.ts",
     "db:migrate:local": "wrangler d1 migrations apply lector-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply lector-db --remote",
     "types": "wrangler types"
@@ -15,7 +18,9 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250620.0",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3",
+    "vitest": "^3.2.4",
     "wrangler": "^4.103.0"
   }
 }

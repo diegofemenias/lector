@@ -41,7 +41,7 @@ export const STORIES_PART8: StoryInput[] = [
       },
       {
         question: "¿Qué contaba la abuela?",
-        options: { a: "Mapas", b: "Recetas", c: "Chistes", d: "Cómo medir la distancia del trueno" },
+        options: { a: "Mapas", b: "Recetas", c: "Chistes", d: "Contar segundos entre trueno y rayo" },
         correct: "d",
       },
       {
@@ -171,7 +171,7 @@ export const STORIES_PART8: StoryInput[] = [
       },
       {
         question: "¿Qué aprendieron?",
-        options: { a: "A atraparlo", b: "A entenderlo para evitar problemas", c: "A ignorarlo", d: "A darle dulces" },
+        options: { a: "A atraparlo", b: "Que entender a un animal evita pelear con él", c: "A ignorarlo", d: "A darle dulces" },
         correct: "b",
       }
     ],
