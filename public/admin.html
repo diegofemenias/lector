@@ -74,6 +74,7 @@
           <thead>
             <tr>
               <th>Nombre</th>
+              <th>Nivel</th>
               <th>Email</th>
               <th>Puntos</th>
               <th>Acciones</th>
@@ -82,9 +83,10 @@
           <tbody>
             ${users
               .map((u) => {
-                const isSelf = u.id === currentUserId;
+                const isSelf = u.accountId === currentUserId;
                 const adminTag = u.isAdmin ? '<span class="admin-badge">admin</span>' : "";
                 const nameValue = u.displayName || "";
+                const level = u.level ?? 1;
                 return `
               <tr data-user-id="${escAttr(u.id)}">
                 <td data-label="Nombre">
@@ -97,6 +99,13 @@
                     data-field="displayName"
                   />
                   ${adminTag}
+                </td>
+                <td data-label="Nivel">
+                  <select class="input level-input" data-field="level">
+                    <option value="1" ${level === 1 ? "selected" : ""}>1°</option>
+                    <option value="2" ${level === 2 ? "selected" : ""}>2°</option>
+                    <option value="3" ${level === 3 ? "selected" : ""}>3°</option>
+                  </select>
                 </td>
                 <td data-label="Email">${esc(u.email)}</td>
                 <td data-label="Puntos">${u.pointsTotal}</td>
@@ -126,15 +135,17 @@
           const userId = row.dataset.userId;
           const input = row.querySelector("[data-field='displayName']");
           const displayName = input.value.trim();
+          const levelSelect = row.querySelector("[data-field='level']");
+          const level = levelSelect ? Number(levelSelect.value) : undefined;
           if (displayName.length < 2) {
             alert("El nombre debe tener al menos 2 caracteres.");
             return;
           }
           try {
             btn.disabled = true;
-            await api(`/api/admin/users/${userId}`, {
+            await api(`/api/admin/readers/${userId}`, {
               method: "PATCH",
-              body: JSON.stringify({ displayName }),
+              body: JSON.stringify({ displayName, level }),
             });
             await renderDashboard();
           } catch (err) {
@@ -154,7 +165,7 @@
           if (!confirm(`¿Eliminar a ${label}? Se borrarán sus puntos e intentos.`)) return;
           try {
             btn.disabled = true;
-            await api(`/api/admin/users/${userId}`, { method: "DELETE" });
+            await api(`/api/admin/readers/${userId}`, { method: "DELETE" });
             await renderDashboard();
           } catch (err) {
             alert(err.message);
@@ -166,15 +177,15 @@
 
     async function renderDashboard() {
       try {
-        const [stats, usersData] = await Promise.all([
+        const [stats, readersData] = await Promise.all([
           api("/api/admin/stats"),
-          api("/api/admin/users"),
+          api("/api/admin/readers"),
         ]);
 
         root.innerHTML = `
           <h2>Estadísticas</h2>
           <div class="admin-grid">
-            <div class="stat-box"><strong>${stats.totalUsers}</strong>Usuarios</div>
+            <div class="stat-box"><strong>${stats.totalReaders ?? stats.totalUsers ?? 0}</strong>Lectores</div>
             <div class="stat-box"><strong>${stats.totalStories}</strong>Cuentos</div>
             <div class="stat-box"><strong>${stats.totalAttempts}</strong>Intentos</div>
             <div class="stat-box"><strong>${stats.totalPoints}</strong>Puntos totales</div>
@@ -182,7 +193,7 @@
 
           <h3 class="admin-section-title">Participantes</h3>
           <p class="subtitle">Editá el nombre o eliminá participantes. Al eliminar se borran sus puntos e historial.</p>
-          ${renderParticipantsTable(usersData.users)}
+          ${renderParticipantsTable(readersData.readers)}
 
           <h3 class="admin-section-title">Actividad reciente</h3>
           <table class="activity-table">
@@ -210,8 +221,8 @@
     if (!me.authenticated) {
       root.innerHTML = `<p class="subtitle">Necesitás <a href="/auth/google">ingresar con Google</a> primero.</p>`;
     } else {
-      currentUserId = me.user.id;
-      if (me.user.isAdmin) {
+      currentUserId = me.account?.id;
+      if (me.account?.isAdmin) {
         await renderDashboard();
       } else {
         await renderLoginForm();

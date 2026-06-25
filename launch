@@ -1,0 +1,6 @@
+npm run db:migrate:remote                                        
+npm run deploy
+
+git add .
+git commit -m "OK"
+git push

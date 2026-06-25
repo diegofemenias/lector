@@ -41,12 +41,17 @@ async function verify(data: string, signature: string, secret: string): Promise<
 }
 
 type SessionPayload =
+  | { accountId: string; readerId?: string; exp: number }
   | { userId: string; exp: number }
   | { googleId: string; email: string; exp: number; pending: true };
 
-export async function createSessionToken(userId: string, secret: string): Promise<string> {
+export async function createSessionToken(
+  accountId: string,
+  secret: string,
+  readerId?: string
+): Promise<string> {
   const exp = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-  const payload = JSON.stringify({ userId, exp });
+  const payload = JSON.stringify({ accountId, ...(readerId ? { readerId } : {}), exp });
   const payloadB64 = base64url(new TextEncoder().encode(payload));
   const sig = await sign(payloadB64, secret);
   return `${payloadB64}.${sig}`;
@@ -80,8 +85,13 @@ export async function parseSessionPayload(
       if (!payload.googleId || !payload.email) return null;
       return payload;
     }
-    if (!("userId" in payload) || !payload.userId) return null;
-    return payload;
+    if ("accountId" in payload && payload.accountId) {
+      return payload;
+    }
+    if ("userId" in payload && payload.userId) {
+      return { accountId: payload.userId, exp: payload.exp };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -94,7 +104,8 @@ export async function parseSessionToken(
 ): Promise<string | null> {
   const payload = await parseSessionPayload(token, secret);
   if (!payload || "pending" in payload) return null;
-  return payload.userId;
+  if ("accountId" in payload) return payload.accountId;
+  return null;
 }
 
 export function sessionCookieHeader(token: string, maxAge: number): string {
@@ -149,6 +160,8 @@ export async function exchangeGoogleCode(
   return { googleId: profile.id, email: profile.email, name: profile.name };
 }
 
+import { getReaderById } from "./readers";
+
 export async function getSessionUser(
   request: Request,
   env: Env
@@ -159,41 +172,50 @@ export async function getSessionUser(
 
   if ("pending" in payload && payload.pending) {
     const row = await env.DB.prepare(
-      "SELECT id, email, display_name, is_admin FROM users WHERE google_id = ?"
+      "SELECT id, email, is_admin FROM users WHERE google_id = ?"
     )
       .bind(payload.googleId)
-      .first<{ id: string; email: string; display_name: string | null; is_admin: number }>();
+      .first<{ id: string; email: string; is_admin: number }>();
 
     if (row) {
       return {
-        id: row.id,
+        accountId: row.id,
         email: row.email,
-        displayName: row.display_name,
         isAdmin: row.is_admin === 1,
+        displayName: null,
       };
     }
 
     return {
-      id: "",
+      accountId: "",
       email: payload.email,
-      displayName: null,
       isAdmin: false,
       pending: true,
       googleId: payload.googleId,
+      displayName: null,
     };
   }
 
+  const accountId = payload.accountId;
   const row = await env.DB.prepare(
-    "SELECT id, email, display_name, is_admin FROM users WHERE id = ?"
+    "SELECT id, email, is_admin FROM users WHERE id = ?"
   )
-    .bind(payload.userId)
-    .first<{ id: string; email: string; display_name: string | null; is_admin: number }>();
+    .bind(accountId)
+    .first<{ id: string; email: string; is_admin: number }>();
   if (!row) return null;
+
+  const sessionReaderId = "readerId" in payload ? payload.readerId : undefined;
+  const reader = sessionReaderId
+    ? await getReaderById(env.DB, sessionReaderId, accountId)
+    : null;
+
   return {
-    id: row.id,
+    accountId: row.id,
     email: row.email,
-    displayName: row.display_name,
     isAdmin: row.is_admin === 1,
+    readerId: reader?.id,
+    displayName: reader?.displayName ?? null,
+    level: reader?.level,
   };
 }
 

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { Env } from "./types";
+import type { Env, ReaderLevel } from "./types";
 import {
   clearSessionCookie,
   clearStateCookie,
@@ -17,22 +17,30 @@ import {
 import {
   findOrCreateUser,
   findUserByGoogleId,
-  deleteIncompleteUser,
+  deleteIncompleteAccount,
   getAdminStats,
   getRandomStory,
   getStoryById,
   getRanking,
-  getUserStats,
-  setDisplayName,
   submitAnswers,
   verifyAdmin,
-  listAdminUsers,
-  adminSetUserDisplayName,
-  adminDeleteUser,
+  getReaderStatsAfterSubmit,
 } from "./db";
+import {
+  createReader,
+  getReaderById,
+  listReadersForAccount,
+  listAdminReaders,
+  adminSetReaderDisplayName,
+  adminSetReaderLevel,
+  adminDeleteReader,
+  setReaderLevel,
+  MAX_READERS_PER_ACCOUNT,
+} from "./readers";
 import { touchDataSync } from "./seed";
 
 const app = new Hono<{ Bindings: Env }>();
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 
 app.use("/api/*", cors({ origin: "*", credentials: true }));
 
@@ -46,6 +54,25 @@ function json(data: unknown, status = 200, headers?: HeadersInit): Response {
     status,
     headers: { "Content-Type": "application/json", ...headers },
   });
+}
+
+function parseLevel(value: unknown): ReaderLevel | null {
+  const n = Number(value);
+  if (n === 1 || n === 2 || n === 3) return n;
+  return null;
+}
+
+async function issueSession(
+  accountId: string,
+  secret: string,
+  readerId?: string
+): Promise<Record<string, string>> {
+  const token = await createSessionToken(accountId, secret, readerId);
+  return { "Set-Cookie": sessionCookieHeader(token, SESSION_MAX_AGE) };
+}
+
+function hasActiveReader(session: Awaited<ReturnType<typeof getSessionUser>>): boolean {
+  return Boolean(session?.readerId && session.displayName);
 }
 
 app.get("/auth/google", (c) => {
@@ -70,12 +97,18 @@ app.get("/auth/callback", async (c) => {
   try {
     const profile = await exchangeGoogleCode(code, c.env, originFromRequest(c.req.raw));
     const existing = await findUserByGoogleId(c.env.DB, profile.googleId);
-    const maxAge = 30 * 24 * 60 * 60;
-    const token = existing
-      ? await createSessionToken(existing.id, c.env.SESSION_SECRET)
-      : await createPendingSessionToken(profile.googleId, profile.email, c.env.SESSION_SECRET);
     const headers = new Headers({ Location: "/" });
-    headers.append("Set-Cookie", sessionCookieHeader(token, maxAge));
+    if (existing) {
+      const token = await createSessionToken(existing.id, c.env.SESSION_SECRET);
+      headers.append("Set-Cookie", sessionCookieHeader(token, SESSION_MAX_AGE));
+    } else {
+      const token = await createPendingSessionToken(
+        profile.googleId,
+        profile.email,
+        c.env.SESSION_SECRET
+      );
+      headers.append("Set-Cookie", sessionCookieHeader(token, SESSION_MAX_AGE));
+    }
     headers.append("Set-Cookie", clearStateCookie());
     return new Response(null, { status: 302, headers });
   } catch {
@@ -84,113 +117,174 @@ app.get("/auth/callback", async (c) => {
 });
 
 app.post("/auth/logout", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (user?.id && !user.pending && !user.displayName) {
-    await deleteIncompleteUser(c.env.DB, user.id);
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (session?.accountId && !session.pending) {
+    await deleteIncompleteAccount(c.env.DB, session.accountId);
   }
   return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
 });
 
 app.get("/api/me", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user) return json({ authenticated: false }, 200);
-  if (user.pending) {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session) return json({ authenticated: false }, 200);
+
+  if (session.pending) {
     return json({
       authenticated: true,
-      user: {
-        email: user.email,
-        displayName: null,
-        isAdmin: false,
-        points: 0,
-        storiesRead: 0,
-        totalStories: 0,
-        unreadStories: 0,
-      },
+      account: { email: session.email, isAdmin: false },
+      reader: null,
+      readers: [],
+      maxReaders: MAX_READERS_PER_ACCOUNT,
     });
   }
-  const stats = await getUserStats(c.env.DB, user.id);
+
+  const readers = await listReadersForAccount(c.env.DB, session.accountId);
+  const activeReader = session.readerId
+    ? readers.find((r) => r.id === session.readerId) ?? (await getReaderById(c.env.DB, session.readerId, session.accountId))
+    : null;
+
   return json({
     authenticated: true,
-    user: {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      isAdmin: user.isAdmin,
-      points: stats.points,
-      storiesRead: stats.storiesRead,
-      totalStories: stats.totalStories,
-      unreadStories: stats.unreadStories,
+    account: {
+      id: session.accountId,
+      email: session.email,
+      isAdmin: session.isAdmin,
     },
+    reader: activeReader,
+    readers,
+    maxReaders: MAX_READERS_PER_ACCOUNT,
   });
 });
 
-app.post("/api/profile", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user) return json({ error: "No autenticado" }, 401);
-  const body = (await c.req.json()) as { displayName?: string };
-  if (!body.displayName) return json({ error: "Nombre requerido" }, 400);
+app.get("/api/readers", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session || session.pending) return json({ error: "No autenticado" }, 401);
+  const readers = await listReadersForAccount(c.env.DB, session.accountId);
+  return json({ readers, maxReaders: MAX_READERS_PER_ACCOUNT });
+});
+
+app.post("/api/readers", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session) return json({ error: "No autenticado" }, 401);
+
+  const body = (await c.req.json()) as { displayName?: string; level?: number };
+  const level = parseLevel(body.level ?? 1);
+  if (!body.displayName?.trim()) return json({ error: "Nombre requerido" }, 400);
+  if (!level) return json({ error: "Nivel inválido" }, 400);
+
   try {
-    let userId = user.id;
-    const maxAge = 30 * 24 * 60 * 60;
+    let accountId = session.accountId;
     const headers: Record<string, string> = {};
 
-    if (user.pending) {
-      if (!user.googleId) return json({ error: "Sesión inválida" }, 401);
-      userId = await findOrCreateUser(c.env.DB, user.googleId, user.email);
-      await setDisplayName(c.env.DB, userId, body.displayName);
-      const token = await createSessionToken(userId, c.env.SESSION_SECRET);
-      headers["Set-Cookie"] = sessionCookieHeader(token, maxAge);
-    } else {
-      await setDisplayName(c.env.DB, userId, body.displayName);
+    if (session.pending) {
+      if (!session.googleId) return json({ error: "Sesión inválida" }, 401);
+      accountId = await findOrCreateUser(c.env.DB, session.googleId, session.email);
     }
 
-    const displayName = body.displayName.trim().slice(0, 40);
-    return json({ ok: true, displayName }, 200, headers);
+    const reader = await createReader(c.env.DB, accountId, body.displayName, level);
+    Object.assign(headers, await issueSession(accountId, c.env.SESSION_SECRET, reader.id));
+
+    return json({ ok: true, reader }, 200, headers);
+  } catch (e) {
+    return json({ error: e instanceof Error ? e.message : "Error" }, 400);
+  }
+});
+
+app.post("/api/readers/:id/activate", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session || session.pending) return json({ error: "No autenticado" }, 401);
+
+  const readerId = c.req.param("id");
+  const reader = await getReaderById(c.env.DB, readerId, session.accountId);
+  if (!reader) return json({ error: "Lector no encontrado" }, 404);
+
+  const headers = await issueSession(session.accountId, c.env.SESSION_SECRET, reader.id);
+  return json({ ok: true, reader }, 200, headers);
+});
+
+app.patch("/api/readers/:id/level", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session || session.pending) return json({ error: "No autenticado" }, 401);
+  if (!hasActiveReader(session) || session.readerId !== c.req.param("id")) {
+    return json({ error: "Activá este lector primero" }, 403);
+  }
+
+  const body = (await c.req.json()) as { level?: number };
+  const level = parseLevel(body.level);
+  if (!level) return json({ error: "Nivel inválido" }, 400);
+
+  try {
+    const reader = await setReaderLevel(c.env.DB, session.readerId!, session.accountId, level);
+    return json({ ok: true, reader });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Error" }, 400);
   }
 });
 
 app.get("/api/story/random", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user) return json({ error: "No autenticado" }, 401);
-  if (!user.displayName) return json({ error: "Nombre requerido" }, 403);
-  const story = await getRandomStory(c.env.DB, user.id);
-  if (!story) return json({ error: "No hay cuentos disponibles" }, 404);
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session || session.pending) return json({ error: "No autenticado" }, 401);
+  if (!hasActiveReader(session)) return json({ error: "Elegí un lector" }, 403);
+
+  const reader = await getReaderById(c.env.DB, session.readerId!, session.accountId);
+  if (!reader) return json({ error: "Lector no encontrado" }, 404);
+
+  const story = await getRandomStory(c.env.DB, reader.id, reader.level);
+  if (!story) {
+    return json(
+      { error: reader.level === 1 ? "No hay cuentos disponibles" : `Todavía no hay cuentos de nivel ${reader.level}` },
+      404
+    );
+  }
   return json({
     story: story.story,
     isRepeat: story.isRepeat,
     unreadRemaining: story.unreadRemaining,
+    level: reader.level,
   });
 });
 
 app.get("/api/story/:id", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user) return json({ error: "No autenticado" }, 401);
-  if (!user.displayName) return json({ error: "Nombre requerido" }, 403);
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session || session.pending) return json({ error: "No autenticado" }, 401);
+  if (!hasActiveReader(session)) return json({ error: "Elegí un lector" }, 403);
+
+  const reader = await getReaderById(c.env.DB, session.readerId!, session.accountId);
+  if (!reader) return json({ error: "Lector no encontrado" }, 404);
+
   const storyId = Number(c.req.param("id"));
   if (!Number.isInteger(storyId) || storyId < 1) return json({ error: "Cuento inválido" }, 400);
-  const story = await getStoryById(c.env.DB, storyId);
+  const story = await getStoryById(c.env.DB, storyId, reader.level);
   if (!story) return json({ error: "Cuento no encontrado" }, 404);
-  return json({ story });
+  return json({ story, level: reader.level });
 });
 
 app.post("/api/story/:id/submit", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user) return json({ error: "No autenticado" }, 401);
-  if (!user.displayName || user.pending) return json({ error: "Nombre requerido" }, 403);
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session || session.pending) return json({ error: "No autenticado" }, 401);
+  if (!hasActiveReader(session)) return json({ error: "Elegí un lector" }, 403);
+
   const storyId = Number(c.req.param("id"));
   if (!Number.isInteger(storyId)) return json({ error: "Cuento inválido" }, 400);
   const body = (await c.req.json()) as { answers?: Record<string, string> };
   if (!body.answers) return json({ error: "Respuestas requeridas" }, 400);
+
   const answers: Record<number, string> = {};
   for (const [k, v] of Object.entries(body.answers)) {
     answers[Number(k)] = v;
   }
+
   try {
-    const result = await submitAnswers(c.env.DB, user.id, storyId, answers);
-    const stats = await getUserStats(c.env.DB, user.id);
-    return json({ ...result, totalPoints: stats.points, storiesRead: stats.storiesRead, unreadStories: stats.unreadStories, totalStories: stats.totalStories });
+    const result = await submitAnswers(c.env.DB, session.readerId!, storyId, answers);
+    const stats = await getReaderStatsAfterSubmit(c.env.DB, session.readerId!, session.accountId);
+    return json({
+      ...result,
+      totalPoints: stats.points,
+      storiesRead: stats.storiesRead,
+      unreadStories: stats.unreadStories,
+      totalStories: stats.totalStories,
+      level: stats.level,
+    });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Error" }, 400);
   }
@@ -202,56 +296,78 @@ app.get("/api/ranking", async (c) => {
 });
 
 app.post("/api/admin/login", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user) return json({ error: "No autenticado" }, 401);
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session || session.pending) return json({ error: "No autenticado" }, 401);
   const body = (await c.req.json()) as { password?: string };
   if (!body.password) return json({ error: "Contraseña requerida" }, 400);
-  const ok = await verifyAdmin(c.env.DB, user, body.password, c.env.ADMIN_PASSWORD);
+  const ok = await verifyAdmin(c.env.DB, session.accountId, body.password, c.env.ADMIN_PASSWORD);
   if (!ok) return json({ error: "Contraseña incorrecta" }, 403);
   return json({ ok: true });
 });
 
 app.get("/api/admin/stats", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user?.isAdmin) return json({ error: "No autorizado" }, 403);
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session?.isAdmin) return json({ error: "No autorizado" }, 403);
   const stats = await getAdminStats(c.env.DB);
   return json(stats);
 });
 
-app.get("/api/admin/users", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user?.isAdmin) return json({ error: "No autorizado" }, 403);
-  const users = await listAdminUsers(c.env.DB);
-  return json({ users });
+app.get("/api/admin/readers", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session?.isAdmin) return json({ error: "No autorizado" }, 403);
+  const readers = await listAdminReaders(c.env.DB);
+  return json({ readers });
 });
 
-app.patch("/api/admin/users/:id", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user?.isAdmin) return json({ error: "No autorizado" }, 403);
-  const userId = c.req.param("id");
-  const body = (await c.req.json()) as { displayName?: string };
-  if (!body.displayName?.trim()) return json({ error: "Nombre requerido" }, 400);
+app.patch("/api/admin/readers/:id", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session?.isAdmin) return json({ error: "No autorizado" }, 403);
+  const readerId = c.req.param("id");
+  const body = (await c.req.json()) as { displayName?: string; level?: number };
   try {
-    const displayName = await adminSetUserDisplayName(c.env.DB, userId, body.displayName);
+    let displayName: string | undefined;
+    if (body.displayName?.trim()) {
+      displayName = await adminSetReaderDisplayName(c.env.DB, readerId, body.displayName);
+    }
+    if (body.level != null) {
+      const level = parseLevel(body.level);
+      if (!level) return json({ error: "Nivel inválido" }, 400);
+      await adminSetReaderLevel(c.env.DB, readerId, level);
+    }
     return json({ ok: true, displayName });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Error" }, 400);
   }
 });
 
-app.delete("/api/admin/users/:id", async (c) => {
-  const user = await getSessionUser(c.req.raw, c.env);
-  if (!user?.isAdmin) return json({ error: "No autorizado" }, 403);
-  const userId = c.req.param("id");
-  if (userId === user.id) {
-    return json({ error: "No podés eliminar tu propia cuenta de admin" }, 400);
-  }
+app.delete("/api/admin/readers/:id", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session?.isAdmin) return json({ error: "No autorizado" }, 403);
+  const readerId = c.req.param("id");
   try {
-    await adminDeleteUser(c.env.DB, userId);
+    await adminDeleteReader(c.env.DB, readerId);
     return json({ ok: true });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Error" }, 400);
   }
+});
+
+/** @deprecated Usar /api/admin/readers */
+app.get("/api/admin/users", async (c) => {
+  const session = await getSessionUser(c.req.raw, c.env);
+  if (!session?.isAdmin) return json({ error: "No autorizado" }, 403);
+  const readers = await listAdminReaders(c.env.DB);
+  return json({
+    users: readers.map((r) => ({
+      id: r.id,
+      email: r.email,
+      displayName: r.displayName,
+      isAdmin: false,
+      pointsTotal: r.pointsTotal,
+      storiesRead: r.storiesRead,
+      level: r.level,
+    })),
+  });
 });
 
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));

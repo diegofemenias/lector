@@ -8,6 +8,8 @@ export interface StoryInput {
   title: string;
   paragraphs: [string, string, string];
   questions: [QuestionInput, QuestionInput, QuestionInput];
+  /** Nivel de lectura (1, 2 o 3). Por defecto 1. */
+  level?: 1 | 2 | 3;
 }
 
 export interface Env {
@@ -20,13 +22,31 @@ export interface Env {
 }
 
 export interface SessionUser {
-  id: string;
+  /** Cuenta Google (tabla users). */
+  accountId: string;
   email: string;
-  displayName: string | null;
   isAdmin: boolean;
-  /** Sesión OAuth sin fila en la base de datos hasta elegir nombre. */
+  /** Sesión OAuth sin cuenta en DB todavía. */
   pending?: boolean;
   googleId?: string;
+  /** Lector activo en esta sesión. */
+  readerId?: string;
+  displayName?: string | null;
+  level?: ReaderLevel;
+}
+
+export type ReaderLevel = 1 | 2 | 3;
+
+export interface ReaderPublic {
+  id: string;
+  accountId: string;
+  displayName: string;
+  level: ReaderLevel;
+  createdAt: string;
+  points: number;
+  storiesRead: number;
+  totalStories: number;
+  unreadStories: number;
 }
 
 export interface StoryPublic {

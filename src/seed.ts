@@ -1,8 +1,12 @@
 import type { StoryInput } from "./types";
 import { STORIES } from "./stories-data";
+import { STORIES_L2 } from "./stories-data-l2";
+import { STORIES_L3 } from "./stories-data-l3";
+
+const ALL_STORIES: StoryInput[] = [...STORIES, ...STORIES_L2, ...STORIES_L3];
 
 /** Incrementar al agregar cuentos o cambiar preguntas en producción. */
-export const DATA_SYNC_VERSION = 3;
+export const DATA_SYNC_VERSION = 4;
 
 const META_DATA_SYNC = "data_sync_version";
 
@@ -51,10 +55,11 @@ async function setMeta(db: D1Database, key: string, value: string): Promise<void
 export async function syncStories(db: D1Database): Promise<number> {
   let added = 0;
 
-  for (const story of STORIES) {
+  for (const story of ALL_STORIES) {
+    const level = story.level ?? 1;
     const existing = await db
-      .prepare("SELECT id FROM stories WHERE title = ?")
-      .bind(story.title)
+      .prepare("SELECT id FROM stories WHERE title = ? AND level = ?")
+      .bind(story.title, level)
       .first<{ id: number }>();
 
     let storyId = existing?.id;
@@ -62,14 +67,14 @@ export async function syncStories(db: D1Database): Promise<number> {
     if (!storyId) {
       await db
         .prepare(
-          "INSERT OR IGNORE INTO stories (title, paragraph1, paragraph2, paragraph3) VALUES (?, ?, ?, ?)"
+          "INSERT OR IGNORE INTO stories (title, paragraph1, paragraph2, paragraph3, level) VALUES (?, ?, ?, ?, ?)"
         )
-        .bind(story.title, story.paragraphs[0], story.paragraphs[1], story.paragraphs[2])
+        .bind(story.title, story.paragraphs[0], story.paragraphs[1], story.paragraphs[2], level)
         .run();
 
       const row = await db
-        .prepare("SELECT id FROM stories WHERE title = ?")
-        .bind(story.title)
+        .prepare("SELECT id FROM stories WHERE title = ? AND level = ?")
+        .bind(story.title, level)
         .first<{ id: number }>();
       storyId = row?.id;
       if (storyId) added++;
@@ -102,14 +107,17 @@ export async function syncStories(db: D1Database): Promise<number> {
 /** Deja exactamente 3 preguntas por cuento, alineadas con los datos fuente. */
 export async function reconcileQuestions(db: D1Database): Promise<number> {
   const storyRows = await db
-    .prepare("SELECT id, title FROM stories")
-    .all<{ id: number; title: string }>();
-  const storyIdByTitle = new Map(storyRows.results.map((r) => [r.title, r.id]));
+    .prepare("SELECT id, title, level FROM stories")
+    .all<{ id: number; title: string; level: number }>();
+  const storyIdByTitleLevel = new Map(
+    storyRows.results.map((r) => [`${r.title}::${r.level}`, r.id])
+  );
 
   let removed = 0;
 
-  for (const story of STORIES) {
-    const storyId = storyIdByTitle.get(story.title);
+  for (const story of ALL_STORIES) {
+    const level = story.level ?? 1;
+    const storyId = storyIdByTitleLevel.get(`${story.title}::${level}`);
     if (!storyId) continue;
 
     const texts = story.questions.map((q) => q.question);
@@ -175,14 +183,17 @@ export async function reconcileQuestions(db: D1Database): Promise<number> {
 /** Actualiza opciones y respuesta correcta de preguntas ya existentes (por título + texto). */
 export async function syncQuestionOptions(db: D1Database): Promise<number> {
   const storyRows = await db
-    .prepare("SELECT id, title FROM stories")
-    .all<{ id: number; title: string }>();
-  const storyIdByTitle = new Map(storyRows.results.map((r) => [r.title, r.id]));
+    .prepare("SELECT id, title, level FROM stories")
+    .all<{ id: number; title: string; level: number }>();
+  const storyIdByTitleLevel = new Map(
+    storyRows.results.map((r) => [`${r.title}::${r.level}`, r.id])
+  );
 
   const statements: D1PreparedStatement[] = [];
 
-  for (const story of STORIES) {
-    const storyId = storyIdByTitle.get(story.title);
+  for (const story of ALL_STORIES) {
+    const level = story.level ?? 1;
+    const storyId = storyIdByTitleLevel.get(`${story.title}::${level}`);
     if (!storyId) continue;
 
     for (const q of story.questions) {
@@ -220,5 +231,5 @@ export async function seedStoriesIfEmpty(db: D1Database): Promise<boolean> {
   return added > 0;
 }
 
-export { STORIES };
+export { STORIES, STORIES_L2, STORIES_L3, ALL_STORIES };
 export type { StoryInput };

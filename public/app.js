@@ -10,11 +10,19 @@ import {
 
 bindVocabularyClicks(app);
 
+const LEVEL_LABELS = {
+  1: "1° nivel",
+  2: "2° nivel",
+  3: "3° nivel",
+};
+
 let state = {
-  user: null,
+  account: null,
+  reader: null,
+  readers: [],
+  maxReaders: 4,
   story: null,
   storyMeta: null,
-  answers: {},
 };
 
 async function api(path, options = {}) {
@@ -36,8 +44,8 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;");
 }
 
-function hasDisplayName() {
-  return Boolean(state.user?.displayName);
+function hasActiveReader() {
+  return Boolean(state.reader?.id);
 }
 
 function closeMobileNav() {
@@ -47,20 +55,22 @@ function closeMobileNav() {
   navToggle.setAttribute("aria-label", "Abrir menú");
 }
 
-function openMobileNav() {
-  nav.classList.add("nav-open");
-  navToggle.classList.add("is-open");
-  navToggle.setAttribute("aria-expanded", "true");
-  navToggle.setAttribute("aria-label", "Cerrar menú");
-}
-
-function toggleMobileNav() {
-  if (nav.classList.contains("nav-open")) closeMobileNav();
-  else openMobileNav();
+function levelSwitcherHtml() {
+  if (!state.reader) return "";
+  const lv = state.reader.level;
+  return `
+    <div class="level-switch" role="group" aria-label="Nivel de lectura">
+      ${[1, 2, 3]
+        .map(
+          (n) =>
+            `<button type="button" class="level-chip ${lv === n ? "active" : ""}" data-action="set-level" data-level="${n}">${n}°</button>`
+        )
+        .join("")}
+    </div>`;
 }
 
 function renderNav() {
-  if (!state.user || !hasDisplayName()) {
+  if (!hasActiveReader()) {
     nav.classList.add("hidden");
     nav.classList.remove("nav-open");
     nav.innerHTML = "";
@@ -72,10 +82,11 @@ function renderNav() {
   nav.classList.remove("hidden");
   navToggle.classList.remove("hidden");
   nav.innerHTML = `
-    <span class="user-chip">${escapeHtml(state.user.displayName)} · ${state.user.points} pts</span>
+    <span class="user-chip">${escapeHtml(state.reader.displayName)} · ${LEVEL_LABELS[state.reader.level]} · ${state.reader.points} pts</span>
+    ${levelSwitcherHtml()}
     <button class="btn btn-small btn-ghost" data-action="home">Inicio</button>
     <button class="btn btn-small btn-ghost" data-action="ranking">Ranking</button>
-    <button class="btn btn-small btn-ghost" data-action="change-name">Cambiar nombre</button>
+    <button class="btn btn-small btn-ghost" data-action="switch-reader">Cambiar lector</button>
     <button class="btn btn-small btn-ghost" data-action="logout">Salir</button>
   `;
   closeMobileNav();
@@ -98,44 +109,81 @@ function renderLogin(error) {
   `;
 }
 
-function renderNamePicker({ editing = false } = {}) {
-  const currentName = editing ? state.user?.displayName || "" : "";
+function renderReaderPicker() {
+  const canAdd = state.readers.length < state.maxReaders;
   app.innerHTML = `
     <section class="card stack">
-      <h2>${editing ? "Cambiar tu nombre" : "¿Cómo te llamamos?"}</h2>
-      <p class="subtitle">${
-        editing
-          ? "Elegí un nombre nuevo. Así aparecerás en el ranking."
-          : "Podés usar tu nombre o un apodo gracioso. Primero preguntale a mamá o papá.<br><br>Con ese nombre aparecerás en el ranking."
-      }</p>
-      <form id="name-form" class="stack">
+      <h2>¿Con qué lector seguimos?</h2>
+      <p class="subtitle">Elegí un lector de esta cuenta. Cada uno tiene su nombre, nivel y puntos.</p>
+      <ul class="reader-list">
+        ${state.readers
+          .map(
+            (r) => `
+          <li>
+            <button type="button" class="reader-card" data-action="activate-reader" data-reader-id="${escapeHtml(r.id)}">
+              <strong>${escapeHtml(r.displayName)}</strong>
+              <span>${LEVEL_LABELS[r.level]} · ${r.points} pts · ${r.storiesRead} cuentos</span>
+            </button>
+          </li>`
+          )
+          .join("")}
+      </ul>
+      ${
+        canAdd
+          ? `<button class="btn btn-primary" type="button" data-action="create-reader">+ Agregar lector</button>`
+          : `<p class="subtitle">Ya tenés ${state.maxReaders} lectores (máximo).</p>`
+      }
+      <button class="btn-text-link" type="button" data-action="logout">Salir y usar otra cuenta</button>
+    </section>
+  `;
+}
+
+function renderCreateReader({ firstAccount = false } = {}) {
+  app.innerHTML = `
+    <section class="card stack">
+      <h2>${firstAccount ? "Creá tu primer lector" : "Nuevo lector"}</h2>
+      <p class="subtitle">Elegí un nombre único (aparece en el ranking) y el nivel de lectura. Primero preguntale a mamá o papá.</p>
+      <form id="reader-form" class="stack">
         <input
           class="input"
           name="displayName"
           maxlength="40"
-          placeholder="Ej: Capitán Libro, La Cabra Astronauta, La Zurda Mágica..."
-          value="${escapeHtml(currentName)}"
+          placeholder="Ej: Capitán Libro, Tomás, La Zurda Mágica..."
           required
         />
+        <fieldset class="level-picker">
+          <legend>Nivel de lectura</legend>
+          <label class="option"><input type="radio" name="level" value="1" checked required /> 1° — Aprendiendo a leer (6-7 años)</label>
+          <label class="option"><input type="radio" name="level" value="2" required /> 2° — Ya lee con fluidez (8-9 años)</label>
+          <label class="option"><input type="radio" name="level" value="3" required /> 3° — Lector avanzado (10-12 años)</label>
+        </fieldset>
         <div class="row name-form-actions">
-          <button class="btn btn-primary" type="submit">${editing ? "Guardar nombre" : "¡Listo, a leer!. Convertite en el GOAT."}</button>
-          ${editing ? `<button class="btn btn-ghost" type="button" data-action="home">Cancelar</button>` : ""}
+          <button class="btn btn-primary" type="submit">¡Listo, a leer!</button>
+          ${!firstAccount ? `<button class="btn btn-ghost" type="button" data-action="pick-reader">Cancelar</button>` : ""}
         </div>
       </form>
       ${
-        !editing
+        firstAccount
           ? `<button class="btn-text-link" type="button" data-action="logout">Salir y usar otra cuenta</button>`
           : ""
       }
     </section>
   `;
-  document.getElementById("name-form").addEventListener("submit", async (e) => {
+
+  document.getElementById("reader-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const displayName = fd.get("displayName");
     try {
-      const result = await api("/api/profile", { method: "POST", body: JSON.stringify({ displayName }) });
-      state.user.displayName = result.displayName;
+      const data = await api("/api/readers", {
+        method: "POST",
+        body: JSON.stringify({
+          displayName: fd.get("displayName"),
+          level: Number(fd.get("level")),
+        }),
+      });
+      state.reader = data.reader;
+      const me = await api("/api/me");
+      state.readers = me.readers;
       renderNav();
       renderHome();
     } catch (err) {
@@ -145,27 +193,33 @@ function renderNamePicker({ editing = false } = {}) {
 }
 
 function renderHome() {
-  const unread = state.user.unreadStories ?? 0;
-  const allRead = unread === 0 && (state.user.totalStories ?? 0) > 0;
-  const progressText = allRead
-    ? "¡Leíste todos los cuentos! Ahora podés volver a leer alguno al azar."
-    : unread > 0
-      ? `Te quedan <strong>${unread}</strong> cuento${unread === 1 ? "" : "s"} nuevo${unread === 1 ? "" : "s"} por leer.`
-      : "Te toca un cuento al azar. Léelo con calma y responde las 3 preguntas.";
+  const r = state.reader;
+  const unread = r.unreadStories ?? 0;
+  const allRead = unread === 0 && (r.totalStories ?? 0) > 0;
+  const noStoriesAtLevel = (r.totalStories ?? 0) === 0;
+
+  const progressText = noStoriesAtLevel
+    ? `Todavía no hay cuentos de ${LEVEL_LABELS[r.level].toLowerCase()}. Probá otro nivel o volvé pronto.`
+    : allRead
+      ? `¡Leíste todos los cuentos de ${LEVEL_LABELS[r.level].toLowerCase()}! Podés repasar uno al azar.`
+      : unread > 0
+        ? `Te quedan <strong>${unread}</strong> cuento${unread === 1 ? "" : "s"} nuevo${unread === 1 ? "" : "s"} de ${LEVEL_LABELS[r.level].toLowerCase()}.`
+        : "Te toca un cuento al azar. Léelo con calma y responde las 3 preguntas.";
 
   app.innerHTML = `
     <section class="card stack">
-      <div class="row" style="justify-content:space-between">
-        <h2>Hola, ${escapeHtml(state.user.displayName)} 👋</h2>
-        <span class="badge">${state.user.points} puntos · ${state.user.storiesRead} cuentos</span>
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+        <h2>Hola, ${escapeHtml(r.displayName)} 👋</h2>
+        <span class="badge">${r.points} puntos · ${r.storiesRead} cuentos (${LEVEL_LABELS[r.level]})</span>
       </div>
+      ${levelSwitcherHtml()}
       <p class="subtitle">${progressText}</p>
       <div class="points-breakdown">
         <span class="chip">+1 leer</span>
         <span class="chip">+1 por acierto</span>
         <span class="chip">+1 bonus si las 3 son correctas</span>
       </div>
-      <button class="btn btn-primary" data-action="new-story">📖 Dame un cuento</button>
+      <button class="btn btn-primary" data-action="new-story" ${noStoriesAtLevel ? "disabled" : ""}>📖 Dame un cuento</button>
       <button class="btn btn-ghost" data-action="ranking">🏆 ¡Mirá el ranking!</button>
     </section>
   `;
@@ -179,7 +233,7 @@ function renderStory() {
     ? `<p class="vocab-hint">💡 Las palabras <span class="word-help-sample">subrayadas en color</span> son más difíciles. Tocalas para ver qué significan.</p>`
     : "";
   const repeatHint = state.storyMeta?.isRepeat
-    ? `<p class="vocab-hint" style="background:#fffbeb;border-color:#fcd34d;color:#b45309">📚 Ya leíste todos los cuentos nuevos. Este es un repaso al azar.</p>`
+    ? `<p class="vocab-hint" style="background:#fffbeb;border-color:#fcd34d;color:#b45309">📚 Ya leíste todos los cuentos nuevos de este nivel. Este es un repaso al azar.</p>`
     : state.storyMeta?.unreadRemaining
       ? `<p class="subtitle" style="margin:0 0 0.5rem">Cuentos nuevos que te faltan: <strong>${state.storyMeta.unreadRemaining}</strong></p>`
       : "";
@@ -227,12 +281,11 @@ function renderStory() {
         method: "POST",
         body: JSON.stringify({ answers }),
       });
-      state.user.points = result.totalPoints;
-      state.user.storiesRead = result.storiesRead;
-      if (result.unreadStories != null) {
-        state.user.unreadStories = result.unreadStories;
-        state.user.totalStories = result.totalStories;
-      }
+      state.reader.points = result.totalPoints;
+      state.reader.storiesRead = result.storiesRead;
+      state.reader.unreadStories = result.unreadStories;
+      state.reader.totalStories = result.totalStories;
+      if (result.level) state.reader.level = result.level;
       renderNav();
       renderResult(result);
     } catch (err) {
@@ -257,7 +310,7 @@ function renderResult(result) {
         <span class="chip">Aciertos: ${result.breakdown.correct}</span>
         <span class="chip">Bonus: ${result.breakdown.bonus}</span>
       </div>
-      <p>Total acumulado: <strong>${state.user.points} puntos</strong></p>
+      <p>Total acumulado: <strong>${state.reader.points} puntos</strong></p>
       <div class="row" style="justify-content:center">
         <button class="btn btn-primary" data-action="new-story">Otro cuento</button>
         <button class="btn btn-ghost" data-action="ranking">Ver ranking</button>
@@ -271,14 +324,14 @@ function renderRanking(ranking) {
   app.innerHTML = `
     <section class="card stack">
       <h2>🏆 Ranking de lectores</h2>
-      <p class="subtitle">¿Quién ira ganando?. ¡Seguí sumando puntos!</p>
+      <p class="subtitle">¿Quién irá ganando? ¡Seguí sumando puntos!</p>
       <ul class="ranking-list">
         ${
           ranking.length
             ? ranking
                 .map(
                   (r) => `
-            <li class="ranking-item ${state.user?.displayName === r.displayName ? "me" : ""}">
+            <li class="ranking-item ${state.reader?.displayName === r.displayName ? "me" : ""}">
               <div class="row ranking-name">
                 <span class="rank-num">#${r.rank}</span>
                 <strong>${escapeHtml(r.displayName)}</strong>
@@ -298,6 +351,15 @@ function renderRanking(ranking) {
   `;
 }
 
+async function refreshMe() {
+  const data = await api("/api/me");
+  state.account = data.account;
+  state.reader = data.reader;
+  state.readers = data.readers ?? [];
+  state.maxReaders = data.maxReaders ?? 4;
+  return data;
+}
+
 async function loadRanking() {
   const data = await api("/api/ranking");
   renderRanking(data.ranking);
@@ -310,24 +372,49 @@ async function loadStory() {
   renderStory();
 }
 
+async function activateReader(readerId) {
+  const data = await api(`/api/readers/${readerId}/activate`, { method: "POST" });
+  state.reader = data.reader;
+  await refreshMe();
+  renderNav();
+  renderHome();
+}
+
+async function changeLevel(level) {
+  if (!state.reader) return;
+  const data = await api(`/api/readers/${state.reader.id}/level`, {
+    method: "PATCH",
+    body: JSON.stringify({ level }),
+  });
+  state.reader = data.reader;
+  await refreshMe();
+  renderNav();
+  renderHome();
+}
+
 async function bootstrap() {
   const params = new URLSearchParams(location.search);
   const authError = params.get("error") === "auth" ? "No pudimos completar el ingreso con Google. Intentá de nuevo." : null;
   if (authError) history.replaceState({}, "", "/");
 
-  const data = await api("/api/me");
+  const data = await refreshMe();
   if (!data.authenticated) {
-    state.user = null;
+    state.account = null;
+    state.reader = null;
     renderNav();
     renderLogin(authError);
     return;
   }
 
-  state.user = data.user;
-
-  if (!state.user.displayName) {
+  if (!state.readers.length) {
     renderNav();
-    renderNamePicker();
+    renderCreateReader({ firstAccount: true });
+    return;
+  }
+
+  if (!hasActiveReader()) {
+    renderNav();
+    renderReaderPicker();
     return;
   }
 
@@ -335,26 +422,61 @@ async function bootstrap() {
   renderHome();
 }
 
-nav.addEventListener("click", async (e) => {
-  const btn = e.target.closest("[data-action]");
-  if (!btn) return;
-  const action = btn.dataset.action;
+async function handleAction(action, el) {
   if (action === "logout") {
-    closeMobileNav();
     await api("/auth/logout", { method: "POST" });
     location.reload();
     return;
   }
-  if (!hasDisplayName()) return;
-  closeMobileNav();
-  if (action === "home") renderHome();
+  if (action === "switch-reader" || action === "pick-reader") {
+    state.reader = null;
+    await refreshMe();
+    renderNav();
+    renderReaderPicker();
+    return;
+  }
+  if (action === "create-reader") {
+    renderCreateReader();
+    return;
+  }
+  if (action === "activate-reader") {
+    await activateReader(el.dataset.readerId);
+    return;
+  }
+  if (action === "set-level") {
+    const level = Number(el.dataset.level);
+    if (level !== state.reader?.level) await changeLevel(level);
+    return;
+  }
+  if (!hasActiveReader()) {
+    renderReaderPicker();
+    return;
+  }
+  if (action === "new-story") await loadStory();
   if (action === "ranking") await loadRanking();
-  if (action === "change-name") renderNamePicker({ editing: true });
+  if (action === "home") renderHome();
+}
+
+nav.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  closeMobileNav();
+  try {
+    await handleAction(btn.dataset.action, btn);
+  } catch (err) {
+    alert(err.message);
+  }
 });
 
 navToggle.addEventListener("click", () => {
   if (nav.classList.contains("hidden")) return;
-  toggleMobileNav();
+  if (nav.classList.contains("nav-open")) closeMobileNav();
+  else {
+    nav.classList.add("nav-open");
+    navToggle.classList.add("is-open");
+    navToggle.setAttribute("aria-expanded", "true");
+    navToggle.setAttribute("aria-label", "Cerrar menú");
+  }
 });
 
 document.addEventListener("click", (e) => {
@@ -370,25 +492,8 @@ window.addEventListener("resize", () => {
 app.addEventListener("click", async (e) => {
   const btn = e.target.closest("[data-action]");
   if (!btn) return;
-  const action = btn.dataset.action;
   try {
-    if (action === "logout") {
-      await api("/auth/logout", { method: "POST" });
-      location.reload();
-      return;
-    }
-    if (action === "change-name") {
-      if (!state.user) return;
-      renderNamePicker({ editing: true });
-      return;
-    }
-    if (!hasDisplayName()) {
-      renderNamePicker();
-      return;
-    }
-    if (action === "new-story") await loadStory();
-    if (action === "ranking") await loadRanking();
-    if (action === "home") renderHome();
+    await handleAction(btn.dataset.action, btn);
   } catch (err) {
     alert(err.message);
   }
