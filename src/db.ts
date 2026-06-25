@@ -152,37 +152,52 @@ export async function getStoryById(
   return assembleStory(story, questions.results ?? []);
 }
 
+function pickRandomId(ids: number[]): number | null {
+  if (ids.length === 0) return null;
+  return ids[Math.floor(Math.random() * ids.length)]!;
+}
+
 export async function getRandomStory(
   db: D1Database,
   readerId: string,
   level: ReaderLevel
 ): Promise<{ story: StoryPublic; isRepeat: boolean; unreadRemaining: number } | null> {
-  const stats = await db
+  const unread = await db
     .prepare(
-      `SELECT
-         (SELECT COUNT(*) FROM stories WHERE level = ?) as total,
-         (SELECT COUNT(DISTINCT a.story_id) FROM story_attempts a
-          INNER JOIN stories s ON s.id = a.story_id
-          WHERE a.reader_id = ? AND s.level = ?) as read_count`
-    )
-    .bind(level, readerId, level)
-    .first<{ total: number; read_count: number }>();
-
-  const totalStories = stats?.total ?? 0;
-  if (totalStories === 0) return null;
-
-  const readCount = stats?.read_count ?? 0;
-  const unreadCount = totalStories - readCount;
-
-  let story = await db
-    .prepare(
-      `SELECT s.id, s.title, s.paragraph1, s.paragraph2, s.paragraph3
+      `SELECT s.id
        FROM stories s
-       LEFT JOIN story_attempts a ON a.story_id = s.id AND a.reader_id = ?
-       WHERE s.level = ? AND a.story_id IS NULL
-       ORDER BY RANDOM() LIMIT 1`
+       WHERE s.level = ?
+         AND NOT EXISTS (
+           SELECT 1 FROM story_attempts a
+           WHERE a.story_id = s.id AND a.reader_id = ?
+         )`
     )
-    .bind(readerId, level)
+    .bind(level, readerId)
+    .all<{ id: number }>();
+
+  const unreadIds = (unread.results ?? []).map((row) => row.id);
+  const isRepeat = unreadIds.length === 0;
+
+  let storyId: number | null;
+  if (!isRepeat) {
+    storyId = pickRandomId(unreadIds);
+  } else {
+    const all = await db
+      .prepare("SELECT id FROM stories WHERE level = ?")
+      .bind(level)
+      .all<{ id: number }>();
+    const allIds = (all.results ?? []).map((row) => row.id);
+    if (allIds.length === 0) return null;
+    storyId = pickRandomId(allIds);
+  }
+
+  if (storyId == null) return null;
+
+  const story = await db
+    .prepare(
+      "SELECT id, title, paragraph1, paragraph2, paragraph3 FROM stories WHERE id = ?"
+    )
+    .bind(storyId)
     .first<{
       id: number;
       title: string;
@@ -191,23 +206,6 @@ export async function getRandomStory(
       paragraph3: string;
     }>();
 
-  const isRepeat = story == null;
-
-  if (!story) {
-    story = await db
-      .prepare(
-        "SELECT id, title, paragraph1, paragraph2, paragraph3 FROM stories WHERE level = ? ORDER BY RANDOM() LIMIT 1"
-      )
-      .bind(level)
-      .first<{
-        id: number;
-        title: string;
-        paragraph1: string;
-        paragraph2: string;
-        paragraph3: string;
-      }>();
-  }
-
   if (!story) return null;
 
   const questions = await fetchStoryQuestions(db, story.id);
@@ -215,7 +213,7 @@ export async function getRandomStory(
   return {
     story: assembleStory(story, questions.results ?? []),
     isRepeat,
-    unreadRemaining: isRepeat ? 0 : unreadCount,
+    unreadRemaining: unreadIds.length,
   };
 }
 
