@@ -1,7 +1,8 @@
 import type { RankingEntry, ReaderLevel, StoryPublic } from "./types";
 import { buildVocabularyForStory } from "./vocabulary";
 import { RANKING_SQLITE_OFFSET } from "./ranking-day";
-import { getReaderById } from "./readers";
+
+const vocabularyCache = new Map<number, Record<string, string>>();
 
 export async function findUserByGoogleId(
   db: D1Database,
@@ -116,7 +117,18 @@ function assembleStory(
     options: { a: q.option_a, b: q.option_b, c: q.option_c, d: q.option_d },
   }));
 
-  const vocabulary = buildVocabularyForStory(story.id, story.title, paragraphs, questionList);
+  const vocabulary = vocabularyCache.get(story.id);
+  if (!vocabulary) {
+    const built = buildVocabularyForStory(story.id, story.title, paragraphs, questionList);
+    vocabularyCache.set(story.id, built);
+    return {
+      id: story.id,
+      title: story.title,
+      paragraphs,
+      questions: questionList,
+      vocabulary: built,
+    };
+  }
 
   return {
     id: story.id,
@@ -144,36 +156,32 @@ export async function getRandomStory(
   readerId: string,
   level: ReaderLevel
 ): Promise<{ story: StoryPublic; isRepeat: boolean; unreadRemaining: number } | null> {
-  const totalRow = await db
-    .prepare("SELECT COUNT(*) as c FROM stories WHERE level = ?")
-    .bind(level)
-    .first<{ c: number }>();
-  const totalStories = totalRow?.c ?? 0;
+  const stats = await db
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM stories WHERE level = ?) as total,
+         (SELECT COUNT(DISTINCT a.story_id) FROM story_attempts a
+          INNER JOIN stories s ON s.id = a.story_id
+          WHERE a.reader_id = ? AND s.level = ?) as read_count`
+    )
+    .bind(level, readerId, level)
+    .first<{ total: number; read_count: number }>();
+
+  const totalStories = stats?.total ?? 0;
   if (totalStories === 0) return null;
 
-  const readRow = await db
-    .prepare(
-      `SELECT COUNT(*) as c FROM story_attempts a
-       JOIN stories s ON s.id = a.story_id
-       WHERE a.reader_id = ? AND s.level = ?`
-    )
-    .bind(readerId, level)
-    .first<{ c: number }>();
-  const readCount = readRow?.c ?? 0;
+  const readCount = stats?.read_count ?? 0;
   const unreadCount = totalStories - readCount;
 
   let story = await db
     .prepare(
-      `SELECT id, title, paragraph1, paragraph2, paragraph3 FROM stories
-       WHERE level = ?
-         AND id NOT IN (
-           SELECT a.story_id FROM story_attempts a
-           JOIN stories s ON s.id = a.story_id
-           WHERE a.reader_id = ? AND s.level = ?
-         )
+      `SELECT s.id, s.title, s.paragraph1, s.paragraph2, s.paragraph3
+       FROM stories s
+       LEFT JOIN story_attempts a ON a.story_id = s.id AND a.reader_id = ?
+       WHERE s.level = ? AND a.story_id IS NULL
        ORDER BY RANDOM() LIMIT 1`
     )
-    .bind(level, readerId, level)
+    .bind(readerId, level)
     .first<{
       id: number;
       title: string;

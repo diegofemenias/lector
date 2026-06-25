@@ -160,7 +160,6 @@ export async function exchangeGoogleCode(
   return { googleId: profile.id, email: profile.email, name: profile.name };
 }
 
-import { getReaderById } from "./readers";
 
 export async function getSessionUser(
   request: Request,
@@ -206,7 +205,11 @@ export async function getSessionUser(
 
   const sessionReaderId = "readerId" in payload ? payload.readerId : undefined;
   const reader = sessionReaderId
-    ? await getReaderById(env.DB, sessionReaderId, accountId)
+    ? await env.DB.prepare(
+        "SELECT id, display_name, level FROM readers WHERE id = ? AND account_id = ?"
+      )
+        .bind(sessionReaderId, accountId)
+        .first<{ id: string; display_name: string; level: number }>()
     : null;
 
   return {
@@ -214,8 +217,8 @@ export async function getSessionUser(
     email: row.email,
     isAdmin: row.is_admin === 1,
     readerId: reader?.id,
-    displayName: reader?.displayName ?? null,
-    level: reader?.level,
+    displayName: reader?.display_name ?? null,
+    level: reader?.level as SessionUser["level"],
   };
 }
 

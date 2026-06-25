@@ -16,6 +16,8 @@ const LEVEL_LABELS = {
   3: "3° nivel",
 };
 
+const READER_CARD_COLORS = 4;
+
 let state = {
   account: null,
   reader: null,
@@ -118,9 +120,9 @@ function renderReaderPicker() {
       <ul class="reader-list">
         ${state.readers
           .map(
-            (r) => `
+            (r, i) => `
           <li>
-            <button type="button" class="reader-card" data-action="activate-reader" data-reader-id="${escapeHtml(r.id)}">
+            <button type="button" class="reader-card reader-card--${i % READER_CARD_COLORS}" data-action="activate-reader" data-reader-id="${escapeHtml(r.id)}">
               <strong>${escapeHtml(r.displayName)}</strong>
               <span>${LEVEL_LABELS[r.level]} · ${r.points} pts · ${r.storiesRead} cuentos</span>
             </button>
@@ -366,6 +368,11 @@ async function loadRanking() {
 }
 
 async function loadStory() {
+  app.innerHTML = `
+    <section class="card stack story-loading">
+      <p class="subtitle">Buscando un cuento para vos…</p>
+    </section>
+  `;
   const data = await api("/api/story/random");
   state.story = data.story;
   state.storyMeta = { isRepeat: data.isRepeat, unreadRemaining: data.unreadRemaining };

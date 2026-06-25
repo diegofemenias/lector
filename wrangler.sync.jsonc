@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "lector",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lector-db",
+      "database_id": "d3c62028-1c0a-448e-aa17-077f5bf2baf2",
+      "remote": true
+    }
+  ]
+}

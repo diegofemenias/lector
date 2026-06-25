@@ -225,14 +225,12 @@ app.get("/api/story/random", async (c) => {
   const session = await getSessionUser(c.req.raw, c.env);
   if (!session || session.pending) return json({ error: "No autenticado" }, 401);
   if (!hasActiveReader(session)) return json({ error: "Elegí un lector" }, 403);
+  if (!session.readerId || !session.level) return json({ error: "Lector no encontrado" }, 404);
 
-  const reader = await getReaderById(c.env.DB, session.readerId!, session.accountId);
-  if (!reader) return json({ error: "Lector no encontrado" }, 404);
-
-  const story = await getRandomStory(c.env.DB, reader.id, reader.level);
+  const story = await getRandomStory(c.env.DB, session.readerId, session.level);
   if (!story) {
     return json(
-      { error: reader.level === 1 ? "No hay cuentos disponibles" : `Todavía no hay cuentos de nivel ${reader.level}` },
+      { error: session.level === 1 ? "No hay cuentos disponibles" : `Todavía no hay cuentos de nivel ${session.level}` },
       404
     );
   }
@@ -240,7 +238,7 @@ app.get("/api/story/random", async (c) => {
     story: story.story,
     isRepeat: story.isRepeat,
     unreadRemaining: story.unreadRemaining,
-    level: reader.level,
+    level: session.level,
   });
 });
 
@@ -248,15 +246,13 @@ app.get("/api/story/:id", async (c) => {
   const session = await getSessionUser(c.req.raw, c.env);
   if (!session || session.pending) return json({ error: "No autenticado" }, 401);
   if (!hasActiveReader(session)) return json({ error: "Elegí un lector" }, 403);
-
-  const reader = await getReaderById(c.env.DB, session.readerId!, session.accountId);
-  if (!reader) return json({ error: "Lector no encontrado" }, 404);
+  if (!session.level) return json({ error: "Lector no encontrado" }, 404);
 
   const storyId = Number(c.req.param("id"));
   if (!Number.isInteger(storyId) || storyId < 1) return json({ error: "Cuento inválido" }, 400);
-  const story = await getStoryById(c.env.DB, storyId, reader.level);
+  const story = await getStoryById(c.env.DB, storyId, session.level);
   if (!story) return json({ error: "Cuento no encontrado" }, 404);
-  return json({ story, level: reader.level });
+  return json({ story, level: session.level });
 });
 
 app.post("/api/story/:id/submit", async (c) => {

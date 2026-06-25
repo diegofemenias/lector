@@ -2,6 +2,7 @@ import type { StoryInput } from "./types";
 import { STORIES } from "./stories-data";
 import { STORIES_L2 } from "./stories-data-l2";
 import { STORIES_L3 } from "./stories-data-l3";
+import { invalidateStoryCountCache } from "./readers";
 
 const ALL_STORIES: StoryInput[] = [...STORIES, ...STORIES_L2, ...STORIES_L3];
 
@@ -10,9 +11,24 @@ export const DATA_SYNC_VERSION = 4;
 
 const META_DATA_SYNC = "data_sync_version";
 
+/** Cuentos esperados por nivel en ALL_STORIES. */
+const EXPECTED_PER_LEVEL = 90;
+
 let dataSyncReady = false;
 
-/** Comprueba si hace falta sincronizar. 1 consulta D1 como máximo por isolate. */
+async function hasExpectedStoryCounts(db: D1Database): Promise<boolean> {
+  const rows = await db
+    .prepare("SELECT level, COUNT(*) as c FROM stories GROUP BY level")
+    .all<{ level: number; c: number }>();
+
+  const byLevel = new Map((rows.results ?? []).map((r) => [r.level, r.c]));
+  for (const level of [1, 2, 3]) {
+    if ((byLevel.get(level) ?? 0) < EXPECTED_PER_LEVEL) return false;
+  }
+  return true;
+}
+
+/** Comprueba si hace falta sincronizar. 1 consulta D1 en estado normal por isolate. */
 export async function touchDataSync(db: D1Database): Promise<void> {
   if (dataSyncReady) return;
 
@@ -22,10 +38,17 @@ export async function touchDataSync(db: D1Database): Promise<void> {
     return;
   }
 
+  if (await hasExpectedStoryCounts(db)) {
+    await setMeta(db, META_DATA_SYNC, String(DATA_SYNC_VERSION));
+    dataSyncReady = true;
+    return;
+  }
+
   await syncStories(db);
   await reconcileQuestions(db);
   await syncQuestionOptions(db);
   await setMeta(db, META_DATA_SYNC, String(DATA_SYNC_VERSION));
+  invalidateStoryCountCache();
   dataSyncReady = true;
 }
 

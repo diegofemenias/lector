@@ -2,6 +2,24 @@ import type { ReaderLevel, ReaderPublic } from "./types";
 
 export const MAX_READERS_PER_ACCOUNT = 4;
 
+let storyCountByLevel: Map<ReaderLevel, number> | null = null;
+
+export function invalidateStoryCountCache(): void {
+  storyCountByLevel = null;
+}
+
+async function getStoryCountForLevel(db: D1Database, level: ReaderLevel): Promise<number> {
+  if (!storyCountByLevel) {
+    const rows = await db
+      .prepare("SELECT level, COUNT(*) as c FROM stories GROUP BY level")
+      .all<{ level: number; c: number }>();
+    storyCountByLevel = new Map(
+      (rows.results ?? []).map((r) => [r.level as ReaderLevel, r.c])
+    );
+  }
+  return storyCountByLevel.get(level) ?? 0;
+}
+
 function normalizeName(name: string): string {
   return name.trim().slice(0, 40);
 }
@@ -64,11 +82,7 @@ export async function listReadersForAccount(
   const readers: ReaderPublic[] = [];
   for (const row of rows.results ?? []) {
     const level = row.level as ReaderLevel;
-    const totalRow = await db
-      .prepare("SELECT COUNT(*) as c FROM stories WHERE level = ?")
-      .bind(level)
-      .first<{ c: number }>();
-    const totalStories = totalRow?.c ?? 0;
+    const totalStories = await getStoryCountForLevel(db, level);
     const storiesRead = row.stories_read_level ?? 0;
     readers.push({
       id: row.id,
@@ -137,11 +151,7 @@ export async function getReaderById(
   if (!row) return null;
 
   const level = row.level as ReaderLevel;
-  const totalRow = await db
-    .prepare("SELECT COUNT(*) as c FROM stories WHERE level = ?")
-    .bind(level)
-    .first<{ c: number }>();
-  const totalStories = totalRow?.c ?? 0;
+  const totalStories = await getStoryCountForLevel(db, level);
   const storiesRead = row.stories_read_level ?? 0;
 
   return {
