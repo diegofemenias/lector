@@ -58,6 +58,15 @@ body {
   color: var(--primary);
   flex: 1;
   min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.logo:hover {
+  opacity: 0.85;
 }
 
 .nav-toggle {

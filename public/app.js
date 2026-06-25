@@ -464,19 +464,43 @@ async function handleAction(action, el) {
     }
     return;
   }
+  if (action === "home") {
+    if (!state.account) {
+      renderNav();
+      renderLogin();
+      return;
+    }
+    if (!hasActiveReader()) {
+      renderNav();
+      if (state.readers.length) renderReaderPicker();
+      else renderCreateReader({ firstAccount: true });
+      return;
+    }
+    renderHome();
+    return;
+  }
   if (!hasActiveReader()) {
     renderReaderPicker();
     return;
   }
   if (action === "new-story") await loadStory();
   if (action === "ranking") await loadRanking();
-  if (action === "home") renderHome();
 }
 
 nav.addEventListener("click", async (e) => {
   const btn = e.target.closest("[data-action]");
   if (!btn) return;
   closeMobileNav();
+  try {
+    await handleAction(btn.dataset.action, btn);
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.querySelector(".header")?.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".logo[data-action]");
+  if (!btn) return;
   try {
     await handleAction(btn.dataset.action, btn);
   } catch (err) {
