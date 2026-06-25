@@ -40,6 +40,10 @@ async function verify(data: string, signature: string, secret: string): Promise<
   return diff === 0;
 }
 
+type SessionPayload =
+  | { userId: string; exp: number }
+  | { googleId: string; email: string; exp: number; pending: true };
+
 export async function createSessionToken(userId: string, secret: string): Promise<string> {
   const exp = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
   const payload = JSON.stringify({ userId, exp });
@@ -48,25 +52,49 @@ export async function createSessionToken(userId: string, secret: string): Promis
   return `${payloadB64}.${sig}`;
 }
 
-export async function parseSessionToken(
+export async function createPendingSessionToken(
+  googleId: string,
+  email: string,
+  secret: string
+): Promise<string> {
+  const exp = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
+  const payload = JSON.stringify({ googleId, email, exp, pending: true });
+  const payloadB64 = base64url(new TextEncoder().encode(payload));
+  const sig = await sign(payloadB64, secret);
+  return `${payloadB64}.${sig}`;
+}
+
+export async function parseSessionPayload(
   token: string | undefined,
   secret: string
-): Promise<string | null> {
+): Promise<SessionPayload | null> {
   if (!token) return null;
   const [payloadB64, sig] = token.split(".");
   if (!payloadB64 || !sig) return null;
   const valid = await verify(payloadB64, sig, secret);
   if (!valid) return null;
   try {
-    const payload = JSON.parse(new TextDecoder().decode(base64urlDecode(payloadB64))) as {
-      userId: string;
-      exp: number;
-    };
+    const payload = JSON.parse(new TextDecoder().decode(base64urlDecode(payloadB64))) as SessionPayload;
     if (payload.exp < Date.now()) return null;
-    return payload.userId;
+    if ("pending" in payload && payload.pending) {
+      if (!payload.googleId || !payload.email) return null;
+      return payload;
+    }
+    if (!("userId" in payload) || !payload.userId) return null;
+    return payload;
   } catch {
     return null;
   }
+}
+
+/** @deprecated Usar parseSessionPayload */
+export async function parseSessionToken(
+  token: string | undefined,
+  secret: string
+): Promise<string | null> {
+  const payload = await parseSessionPayload(token, secret);
+  if (!payload || "pending" in payload) return null;
+  return payload.userId;
 }
 
 export function sessionCookieHeader(token: string, maxAge: number): string {
@@ -126,12 +154,39 @@ export async function getSessionUser(
   env: Env
 ): Promise<SessionUser | null> {
   const token = getSessionFromRequest(request);
-  const userId = await parseSessionToken(token, env.SESSION_SECRET);
-  if (!userId) return null;
+  const payload = await parseSessionPayload(token, env.SESSION_SECRET);
+  if (!payload) return null;
+
+  if ("pending" in payload && payload.pending) {
+    const row = await env.DB.prepare(
+      "SELECT id, email, display_name, is_admin FROM users WHERE google_id = ?"
+    )
+      .bind(payload.googleId)
+      .first<{ id: string; email: string; display_name: string | null; is_admin: number }>();
+
+    if (row) {
+      return {
+        id: row.id,
+        email: row.email,
+        displayName: row.display_name,
+        isAdmin: row.is_admin === 1,
+      };
+    }
+
+    return {
+      id: "",
+      email: payload.email,
+      displayName: null,
+      isAdmin: false,
+      pending: true,
+      googleId: payload.googleId,
+    };
+  }
+
   const row = await env.DB.prepare(
     "SELECT id, email, display_name, is_admin FROM users WHERE id = ?"
   )
-    .bind(userId)
+    .bind(payload.userId)
     .first<{ id: string; email: string; display_name: string | null; is_admin: number }>();
   if (!row) return null;
   return {

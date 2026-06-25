@@ -1,10 +1,34 @@
 import type { StoryInput } from "./types";
 import { STORIES } from "./stories-data";
 
-/** Incrementar cuando cambien opciones/respuestas de preguntas ya en producción. */
-export const QUESTIONS_LAYOUT_VERSION = 2;
+/** Incrementar al agregar cuentos o cambiar preguntas en producción. */
+export const DATA_SYNC_VERSION = 3;
 
-const META_QUESTIONS_VERSION = "questions_layout_version";
+const META_DATA_SYNC = "data_sync_version";
+
+let dataSyncReady = false;
+
+/** Comprueba si hace falta sincronizar. 1 consulta D1 como máximo por isolate. */
+export async function touchDataSync(db: D1Database): Promise<void> {
+  if (dataSyncReady) return;
+
+  const stored = await getMeta(db, META_DATA_SYNC);
+  if (stored === String(DATA_SYNC_VERSION)) {
+    dataSyncReady = true;
+    return;
+  }
+
+  await syncStories(db);
+  await reconcileQuestions(db);
+  await syncQuestionOptions(db);
+  await setMeta(db, META_DATA_SYNC, String(DATA_SYNC_VERSION));
+  dataSyncReady = true;
+}
+
+/** @deprecated Usar touchDataSync */
+export async function ensureQuestionOptionsSynced(db: D1Database): Promise<void> {
+  await touchDataSync(db);
+}
 
 async function getMeta(db: D1Database, key: string): Promise<string | null> {
   const row = await db
@@ -188,16 +212,6 @@ export async function syncQuestionOptions(db: D1Database): Promise<number> {
   }
 
   return statements.length;
-}
-
-export async function ensureQuestionOptionsSynced(db: D1Database): Promise<void> {
-  const version = String(QUESTIONS_LAYOUT_VERSION);
-  const stored = await getMeta(db, META_QUESTIONS_VERSION);
-  if (stored === version) return;
-
-  await reconcileQuestions(db);
-  await syncQuestionOptions(db);
-  await setMeta(db, META_QUESTIONS_VERSION, version);
 }
 
 /** @deprecated Usar syncStories */

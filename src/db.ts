@@ -2,6 +2,16 @@ import type { Env, RankingEntry, SessionUser, StoryPublic } from "./types";
 import { buildVocabularyForStory } from "./vocabulary";
 import { RANKING_SQLITE_OFFSET } from "./ranking-day";
 
+export async function findUserByGoogleId(
+  db: D1Database,
+  googleId: string
+): Promise<{ id: string; email: string; display_name: string | null; is_admin: number } | null> {
+  return db
+    .prepare("SELECT id, email, display_name, is_admin FROM users WHERE google_id = ?")
+    .bind(googleId)
+    .first();
+}
+
 export async function findOrCreateUser(
   db: D1Database,
   googleId: string,
@@ -375,6 +385,17 @@ export async function adminSetUserDisplayName(
 export async function adminDeleteUser(db: D1Database, userId: string): Promise<void> {
   const exists = await db.prepare("SELECT id FROM users WHERE id = ?").bind(userId).first();
   if (!exists) throw new Error("Participante no encontrado");
+  await db.prepare("DELETE FROM story_attempts WHERE user_id = ?").bind(userId).run();
+  await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+}
+
+/** Elimina usuarios que nunca eligieron nombre (registros huérfanos). */
+export async function deleteIncompleteUser(db: D1Database, userId: string): Promise<void> {
+  const row = await db
+    .prepare("SELECT display_name FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ display_name: string | null }>();
+  if (!row || row.display_name != null) return;
   await db.prepare("DELETE FROM story_attempts WHERE user_id = ?").bind(userId).run();
   await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
 }

@@ -24,6 +24,9 @@ export interface SessionUser {
   email: string;
   displayName: string | null;
   isAdmin: boolean;
+  /** Sesión OAuth sin fila en la base de datos hasta elegir nombre. */
+  pending?: boolean;
+  googleId?: string;
 }
 
 export interface StoryPublic {

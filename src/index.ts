@@ -5,6 +5,7 @@ import {
   clearSessionCookie,
   clearStateCookie,
   createSessionToken,
+  createPendingSessionToken,
   exchangeGoogleCode,
   getOAuthState,
   getSessionUser,
@@ -15,6 +16,8 @@ import {
 } from "./auth";
 import {
   findOrCreateUser,
+  findUserByGoogleId,
+  deleteIncompleteUser,
   getAdminStats,
   getRandomStory,
   getStoryById,
@@ -27,19 +30,7 @@ import {
   adminSetUserDisplayName,
   adminDeleteUser,
 } from "./db";
-import { ensureQuestionOptionsSynced, syncStories } from "./seed";
-
-let dataSyncPromise: Promise<void> | null = null;
-
-function ensureDataSynced(db: D1Database): Promise<void> {
-  if (!dataSyncPromise) {
-    dataSyncPromise = (async () => {
-      await syncStories(db);
-      await ensureQuestionOptionsSynced(db);
-    })();
-  }
-  return dataSyncPromise;
-}
+import { touchDataSync } from "./seed";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -78,9 +69,11 @@ app.get("/auth/callback", async (c) => {
   }
   try {
     const profile = await exchangeGoogleCode(code, c.env, originFromRequest(c.req.raw));
-    const userId = await findOrCreateUser(c.env.DB, profile.googleId, profile.email);
-    const token = await createSessionToken(userId, c.env.SESSION_SECRET);
+    const existing = await findUserByGoogleId(c.env.DB, profile.googleId);
     const maxAge = 30 * 24 * 60 * 60;
+    const token = existing
+      ? await createSessionToken(existing.id, c.env.SESSION_SECRET)
+      : await createPendingSessionToken(profile.googleId, profile.email, c.env.SESSION_SECRET);
     const headers = new Headers({ Location: "/" });
     headers.append("Set-Cookie", sessionCookieHeader(token, maxAge));
     headers.append("Set-Cookie", clearStateCookie());
@@ -90,13 +83,31 @@ app.get("/auth/callback", async (c) => {
   }
 });
 
-app.post("/auth/logout", () => {
+app.post("/auth/logout", async (c) => {
+  const user = await getSessionUser(c.req.raw, c.env);
+  if (user?.id && !user.pending && !user.displayName) {
+    await deleteIncompleteUser(c.env.DB, user.id);
+  }
   return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
 });
 
 app.get("/api/me", async (c) => {
   const user = await getSessionUser(c.req.raw, c.env);
   if (!user) return json({ authenticated: false }, 200);
+  if (user.pending) {
+    return json({
+      authenticated: true,
+      user: {
+        email: user.email,
+        displayName: null,
+        isAdmin: false,
+        points: 0,
+        storiesRead: 0,
+        totalStories: 0,
+        unreadStories: 0,
+      },
+    });
+  }
   const stats = await getUserStats(c.env.DB, user.id);
   return json({
     authenticated: true,
@@ -119,8 +130,22 @@ app.post("/api/profile", async (c) => {
   const body = (await c.req.json()) as { displayName?: string };
   if (!body.displayName) return json({ error: "Nombre requerido" }, 400);
   try {
-    await setDisplayName(c.env.DB, user.id, body.displayName);
-    return json({ ok: true, displayName: body.displayName.trim().slice(0, 40) });
+    let userId = user.id;
+    const maxAge = 30 * 24 * 60 * 60;
+    const headers: Record<string, string> = {};
+
+    if (user.pending) {
+      if (!user.googleId) return json({ error: "Sesión inválida" }, 401);
+      userId = await findOrCreateUser(c.env.DB, user.googleId, user.email);
+      await setDisplayName(c.env.DB, userId, body.displayName);
+      const token = await createSessionToken(userId, c.env.SESSION_SECRET);
+      headers["Set-Cookie"] = sessionCookieHeader(token, maxAge);
+    } else {
+      await setDisplayName(c.env.DB, userId, body.displayName);
+    }
+
+    const displayName = body.displayName.trim().slice(0, 40);
+    return json({ ok: true, displayName }, 200, headers);
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Error" }, 400);
   }
@@ -153,6 +178,7 @@ app.get("/api/story/:id", async (c) => {
 app.post("/api/story/:id/submit", async (c) => {
   const user = await getSessionUser(c.req.raw, c.env);
   if (!user) return json({ error: "No autenticado" }, 401);
+  if (!user.displayName || user.pending) return json({ error: "Nombre requerido" }, 403);
   const storyId = Number(c.req.param("id"));
   if (!Number.isInteger(storyId)) return json({ error: "Cuento inválido" }, 400);
   const body = (await c.req.json()) as { answers?: Record<string, string> };
@@ -230,9 +256,15 @@ app.delete("/api/admin/users/:id", async (c) => {
 
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
+function needsDataSync(pathname: string): boolean {
+  return pathname.startsWith("/api/story/");
+}
+
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    ctx.waitUntil(ensureDataSynced(env.DB));
-    return app.fetch(request, env, ctx);
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+    if (needsDataSync(new URL(request.url).pathname)) {
+      await touchDataSync(env.DB);
+    }
+    return app.fetch(request, env, _ctx);
   },
 };
