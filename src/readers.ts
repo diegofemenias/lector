@@ -2,22 +2,79 @@ import type { ReaderLevel, ReaderPublic } from "./types";
 
 export const MAX_READERS_PER_ACCOUNT = 4;
 
+const STORY_COUNTS_META = "story_counts_by_level";
+const LEVELS: ReaderLevel[] = [1, 2, 3];
+
 let storyCountByLevel: Map<ReaderLevel, number> | null = null;
 
 export function invalidateStoryCountCache(): void {
   storyCountByLevel = null;
 }
 
-async function getStoryCountForLevel(db: D1Database, level: ReaderLevel): Promise<number> {
-  if (!storyCountByLevel) {
-    const rows = await db
-      .prepare("SELECT level, COUNT(*) as c FROM stories GROUP BY level")
-      .all<{ level: number; c: number }>();
-    storyCountByLevel = new Map(
-      (rows.results ?? []).map((r) => [r.level as ReaderLevel, r.c])
-    );
+function countsFromJson(value: string): Map<ReaderLevel, number> | null {
+  try {
+    const data = JSON.parse(value) as Record<string, number>;
+    return new Map(LEVELS.map((level) => [level, data[String(level)] ?? 0]));
+  } catch {
+    return null;
   }
-  return storyCountByLevel.get(level) ?? 0;
+}
+
+function countsToJson(counts: Map<ReaderLevel, number>): string {
+  return JSON.stringify(Object.fromEntries(LEVELS.map((level) => [String(level), counts.get(level) ?? 0])));
+}
+
+async function persistStoryCountsMeta(db: D1Database, counts: Map<ReaderLevel, number>): Promise<void> {
+  await db
+    .prepare(
+      "INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+    )
+    .bind(STORY_COUNTS_META, countsToJson(counts))
+    .run();
+}
+
+/** Recalcula conteos desde stories y los guarda en app_meta (solo tras sync de datos). */
+export async function refreshStoryCountsMeta(db: D1Database): Promise<void> {
+  const rows = await db
+    .prepare("SELECT level, COUNT(*) as c FROM stories GROUP BY level")
+    .all<{ level: number; c: number }>();
+
+  const counts = new Map<ReaderLevel, number>(
+    LEVELS.map((level) => {
+      const row = (rows.results ?? []).find((r) => r.level === level);
+      return [level, row?.c ?? 0];
+    })
+  );
+
+  await persistStoryCountsMeta(db, counts);
+  storyCountByLevel = counts;
+}
+
+async function loadStoryCounts(db: D1Database): Promise<Map<ReaderLevel, number>> {
+  const meta = await db
+    .prepare("SELECT value FROM app_meta WHERE key = ?")
+    .bind(STORY_COUNTS_META)
+    .first<{ value: string }>();
+
+  if (meta?.value) {
+    const counts = countsFromJson(meta.value);
+    if (counts) return counts;
+  }
+
+  await refreshStoryCountsMeta(db);
+  return storyCountByLevel ?? new Map(LEVELS.map((level) => [level, 0]));
+}
+
+export async function getStoryCountsByLevel(db: D1Database): Promise<Map<ReaderLevel, number>> {
+  if (!storyCountByLevel) {
+    storyCountByLevel = await loadStoryCounts(db);
+  }
+  return storyCountByLevel;
+}
+
+async function getStoryCountForLevel(db: D1Database, level: ReaderLevel): Promise<number> {
+  const counts = await getStoryCountsByLevel(db);
+  return counts.get(level) ?? 0;
 }
 
 function normalizeName(name: string): string {
@@ -321,12 +378,7 @@ export async function getReaderStatsForLevel(
     .bind(readerId, level)
     .first<{ points: number; stories_read: number }>();
 
-  const totalRow = await db
-    .prepare("SELECT COUNT(*) as c FROM stories WHERE level = ?")
-    .bind(level)
-    .first<{ c: number }>();
-
-  const totalStories = totalRow?.c ?? 0;
+  const totalStories = await getStoryCountForLevel(db, level);
   const storiesRead = pointsRow?.stories_read ?? 0;
 
   const allPointsRow = await db

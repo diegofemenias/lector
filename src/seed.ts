@@ -1,9 +1,9 @@
-import type { StoryInput } from "./types";
+import type { StoryInput, ReaderLevel } from "./types";
 import { ALL_STORIES } from "./all-stories";
 import { STORIES } from "./stories-data";
 import { STORIES_L2 } from "./stories-data-l2";
 import { STORIES_L3 } from "./stories-data-l3";
-import { invalidateStoryCountCache } from "./readers";
+import { refreshStoryCountsMeta, getStoryCountsByLevel } from "./readers";
 
 /** Incrementar al agregar cuentos o cambiar preguntas en producción. */
 export const DATA_SYNC_VERSION = 5;
@@ -16,12 +16,8 @@ const EXPECTED_PER_LEVEL = 90;
 let dataSyncReady = false;
 
 async function hasExpectedStoryCounts(db: D1Database): Promise<boolean> {
-  const rows = await db
-    .prepare("SELECT level, COUNT(*) as c FROM stories GROUP BY level")
-    .all<{ level: number; c: number }>();
-
-  const byLevel = new Map((rows.results ?? []).map((r) => [r.level, r.c]));
-  for (const level of [1, 2, 3]) {
+  const byLevel = await getStoryCountsByLevel(db);
+  for (const level of [1, 2, 3] as ReaderLevel[]) {
     if ((byLevel.get(level) ?? 0) < EXPECTED_PER_LEVEL) return false;
   }
   return true;
@@ -46,8 +42,8 @@ export async function touchDataSync(db: D1Database): Promise<void> {
   await syncStories(db);
   await reconcileQuestions(db);
   await syncQuestionOptions(db);
+  await refreshStoryCountsMeta(db);
   await setMeta(db, META_DATA_SYNC, String(DATA_SYNC_VERSION));
-  invalidateStoryCountCache();
   dataSyncReady = true;
 }
 
